@@ -16,15 +16,14 @@ import {
 import { restrictToWindowEdges } from "@dnd-kit/modifiers";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { generateKeyBetween } from "fractional-indexing";
-import { useAtom, useAtomValue } from "jotai";
-import { useMemo, useState } from "react";
+import { useAtom } from "jotai";
+import { useState } from "react";
 import { useBoard } from "~/hooks/use-board";
 import { useMoveCard } from "~/hooks/use-cards";
 import { comparePosition } from "~/lib/position";
-import { dragStateAtom, filterAtom, groupByAtom } from "~/stores/kanban";
+import { dragStateAtom } from "~/stores/kanban";
 import { Card } from "./card";
 import { Column } from "./column";
-import { GroupedColumn } from "./grouped-column";
 
 interface CardData {
   id: string;
@@ -50,8 +49,6 @@ const dropAnimationConfig: DropAnimation = {
 export function Board() {
   const { data: board } = useBoard();
   const [dragState, setDragState] = useAtom(dragStateAtom);
-  const groupBy = useAtomValue(groupByAtom);
-  const filter = useAtomValue(filterAtom);
   const moveCard = useMoveCard();
 
   const [activeCard, setActiveCard] = useState<CardData | null>(null);
@@ -72,69 +69,6 @@ export function Board() {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
-
-  // Get all cards from all columns
-  const allCards = useMemo(() => {
-    if (!board) return [];
-    return board.columns.flatMap((col) => col.cards);
-  }, [board]);
-
-  // Filter cards based on current filter
-  const filteredCards = useMemo(() => {
-    return allCards.filter((card) => {
-      if (filter.priority && card.priority !== filter.priority) return false;
-      if (filter.tag) {
-        const tags: string[] = card.tags ? JSON.parse(card.tags) : [];
-        if (!tags.includes(filter.tag)) return false;
-      }
-      return true;
-    });
-  }, [allCards, filter]);
-
-  // Create grouped columns when grouping by priority or tag
-  const groupedColumns = useMemo(() => {
-    if (groupBy === "column") return null;
-
-    if (groupBy === "priority") {
-      const priorities = ["high", "medium", "low", null];
-      return priorities.map((priority) => ({
-        id: `priority-${priority ?? "none"}`,
-        name: priority
-          ? priority.charAt(0).toUpperCase() + priority.slice(1)
-          : "No Priority",
-        cards: filteredCards
-          .filter((card) => card.priority === priority)
-          .sort((a, b) => comparePosition(a.position, b.position)),
-      }));
-    }
-
-    if (groupBy === "tag") {
-      const tagMap = new Map<string, CardData[]>();
-      tagMap.set("untagged", []);
-
-      filteredCards.forEach((card) => {
-        const tags: string[] = card.tags ? JSON.parse(card.tags) : [];
-        if (tags.length === 0) {
-          tagMap.get("untagged")!.push(card);
-        } else {
-          tags.forEach((tag) => {
-            if (!tagMap.has(tag)) {
-              tagMap.set(tag, []);
-            }
-            tagMap.get(tag)!.push(card);
-          });
-        }
-      });
-
-      return Array.from(tagMap.entries()).map(([tag, cards]) => ({
-        id: `tag-${tag}`,
-        name: tag === "untagged" ? "Untagged" : tag,
-        cards: cards.sort((a, b) => comparePosition(a.position, b.position)),
-      }));
-    }
-
-    return null;
-  }, [groupBy, filteredCards]);
 
   if (!board) {
     return (
@@ -190,7 +124,7 @@ export function Board() {
     setDragState({ activeId: null, type: null });
     setActiveCard(null);
 
-    if (!over || groupBy !== "column") return;
+    if (!over) return;
     if (active.data.current?.type !== "card") return;
 
     const activeCard = active.data.current.card as CardData;
@@ -259,11 +193,9 @@ export function Board() {
       onDragEnd={handleDragEnd}
     >
       <div className="flex h-full gap-4 overflow-x-auto overscroll-x-contain p-4 [-webkit-overflow-scrolling:touch]">
-        {groupBy === "column"
-          ? board.columns.map((column) => <Column key={column.id} column={column} />)
-          : groupedColumns?.map((group) => (
-              <GroupedColumn key={group.id} group={group} />
-            ))}
+        {board.columns.map((column) => (
+          <Column key={column.id} column={column} />
+        ))}
       </div>
 
       <DragOverlay

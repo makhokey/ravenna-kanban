@@ -2,7 +2,11 @@
   "name": "ravenna-kanban",
   "private": true,
   "workspaces": {
-    "packages": ["apps/*", "packages/*", "tooling/*"],
+    "packages": [
+      "apps/*",
+      "packages/*",
+      "tooling/*"
+    ],
     "catalog": {
       "@base-ui/react": "^1.1.0",
       "@cloudflare/workers-types": "^4.20260131.0",

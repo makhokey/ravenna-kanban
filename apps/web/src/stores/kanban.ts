@@ -1,12 +1,5 @@
 import { atom } from "jotai";
 
-export const filterAtom = atom<{
-  priority?: "low" | "medium" | "high";
-  tag?: string;
-}>({});
-
-export const groupByAtom = atom<"column" | "priority" | "tag">("column");
-
 export const dialogAtom = atom<{
   open: boolean;
   mode: "create" | "edit";

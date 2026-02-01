@@ -1,12 +1,12 @@
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { cn } from "@repo/ui/lib/utils";
-import { useAtomValue, useSetAtom } from "jotai";
+import { useSetAtom } from "jotai";
 import { MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useDeleteCard } from "~/hooks/use-cards";
 import { useDeleteColumn, useUpdateColumn } from "~/hooks/use-columns";
 import { comparePosition } from "~/lib/position";
-import { dialogAtom, filterAtom } from "~/stores/kanban";
+import { dialogAtom } from "~/stores/kanban";
 import { Card } from "./card";
 
 interface CardData {
@@ -36,25 +36,17 @@ export function Column({ column }: ColumnProps) {
   const [showMenu, setShowMenu] = useState(false);
 
   const setDialog = useSetAtom(dialogAtom);
-  const filter = useAtomValue(filterAtom);
 
   const updateColumn = useUpdateColumn();
   const deleteColumn = useDeleteColumn();
   const deleteCard = useDeleteCard();
 
-  // Filter and sort cards - SortableContext requires items in render order
-  const filteredCards = column.cards
-    .filter((card) => {
-      if (filter.priority && card.priority !== filter.priority) return false;
-      if (filter.tag) {
-        const tags: string[] = card.tags ? JSON.parse(card.tags) : [];
-        if (!tags.includes(filter.tag)) return false;
-      }
-      return true;
-    })
-    .sort((a, b) => comparePosition(a.position, b.position));
+  // Sort cards by position - SortableContext requires items in render order
+  const sortedCards = [...column.cards].sort((a, b) =>
+    comparePosition(a.position, b.position),
+  );
 
-  const cardIds = filteredCards.map((card) => card.id);
+  const cardIds = sortedCards.map((card) => card.id);
 
   const handleNameSubmit = () => {
     if (name.trim() && name !== column.name) {
@@ -112,7 +104,7 @@ export function Column({ column }: ColumnProps) {
           </button>
         )}
 
-        <span className="text-muted-foreground text-xs">{filteredCards.length}</span>
+        <span className="text-muted-foreground text-xs">{sortedCards.length}</span>
 
         <div className="relative">
           <button
@@ -145,7 +137,7 @@ export function Column({ column }: ColumnProps) {
       {/* Cards */}
       <div className="flex flex-1 flex-col gap-2 overflow-y-auto p-2 pt-0">
         <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
-          {filteredCards.map((card) => (
+          {sortedCards.map((card) => (
             <Card key={card.id} card={card} onDelete={handleDeleteCard} />
           ))}
         </SortableContext>

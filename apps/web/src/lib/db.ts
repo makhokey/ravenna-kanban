@@ -1,5 +1,5 @@
-import { env } from "cloudflare:workers";
 import { createDb } from "@repo/db";
+import { env } from "cloudflare:workers";
 
 // Access D1 binding from Cloudflare Workers environment
 export function getDb() {
