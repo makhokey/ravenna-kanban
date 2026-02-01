@@ -7,7 +7,18 @@ export const dialogAtom = atom<{
   columnId?: string;
 }>({ open: false, mode: "create" });
 
-export const dragStateAtom = atom<{
+export type DragState = {
   activeId: string | null;
   type: "card" | null;
-}>({ activeId: null, type: null });
+  targetColumnId: string | null;
+  insertIndex: number | null;
+};
+
+export const INITIAL_DRAG_STATE: DragState = {
+  activeId: null,
+  type: null,
+  targetColumnId: null,
+  insertIndex: null,
+};
+
+export const dragStateAtom = atom<DragState>(INITIAL_DRAG_STATE);

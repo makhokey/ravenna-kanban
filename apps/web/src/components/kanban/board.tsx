@@ -1,4 +1,5 @@
 import {
+  closestCenter,
   DndContext,
   DragEndEvent,
   DragOverEvent,
@@ -7,11 +8,8 @@ import {
   KeyboardSensor,
   PointerSensor,
   TouchSensor,
-  closestCenter,
-  defaultDropAnimationSideEffects,
   useSensor,
   useSensors,
-  type DropAnimation,
 } from "@dnd-kit/core";
 import { restrictToWindowEdges } from "@dnd-kit/modifiers";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
@@ -20,21 +18,23 @@ import { useSetAtom } from "jotai";
 import { useState } from "react";
 import { useBoard } from "~/hooks/use-board";
 import { useMoveCard } from "~/hooks/use-cards";
+import { dragStateAtom, INITIAL_DRAG_STATE } from "~/stores/kanban";
 import type { CardData } from "~/types/board";
-import { dragStateAtom } from "~/stores/kanban";
+import { isCardDragData } from "~/types/dnd";
 import { Card } from "./card";
 import { Column } from "./column";
 
-// Drop animation config for smooth card placement
-const dropAnimationConfig: DropAnimation = {
-  sideEffects: defaultDropAnimationSideEffects({
-    styles: {
-      active: {
-        opacity: "0.5",
-      },
-    },
-  }),
-};
+function getTargetColumnId(over: {
+  id: string | number;
+  data: { current?: unknown };
+}): string | null {
+  const overCard = (over.data.current as { card?: CardData })?.card;
+  if (overCard) return overCard.columnId;
+  if ((over.data.current as { type?: string })?.type === "column") {
+    return over.id as string;
+  }
+  return null;
+}
 
 export function Board() {
   const { data: board } = useBoard();
@@ -71,86 +71,113 @@ export function Board() {
   }
 
   const handleDragStart = (event: DragStartEvent) => {
-    const { active } = event;
-    const type = active.data.current?.type;
+    if (!isCardDragData(event.active.data.current)) return;
+    setActiveCard(event.active.data.current.card);
+    setDragState({
+      ...INITIAL_DRAG_STATE,
+      activeId: event.active.id as string,
+      type: "card",
+    });
+  };
 
-    if (type === "card") {
-      setActiveCard(active.data.current?.card);
-      setDragState({ activeId: active.id as string, type: "card" });
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveCard(null);
+
+    // Delay dragState reset to let optimistic update process first
+    requestAnimationFrame(() => {
+      setDragState(INITIAL_DRAG_STATE);
+    });
+
+    if (!over || !board || !isCardDragData(active.data.current)) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    const activeCard = board.cardsById[activeId];
+    if (!activeCard) return;
+
+    // Determine target column - either from over card or if over a column directly
+    const overCard = over.data.current?.card as CardData | undefined;
+    const targetColumnId = getTargetColumnId(over);
+    if (!targetColumnId) return;
+
+    const targetCardIds = board.cardIdsByColumn[targetColumnId] ?? [];
+
+    // Calculate new position using fractional indexing
+    let newPosition: string;
+
+    if (overCard) {
+      // Dropped on a card - insert relative to it
+      const overIndex = targetCardIds.indexOf(overId);
+      const activeIndex = targetCardIds.indexOf(activeId);
+
+      // Determine if inserting before or after the over card
+      const insertAfter = activeIndex !== -1 && activeIndex < overIndex;
+
+      if (insertAfter) {
+        // Insert after over card
+        const afterId = targetCardIds[overIndex + 1];
+        const afterCard = afterId ? board.cardsById[afterId] : null;
+        newPosition = generateKeyBetween(overCard.position, afterCard?.position ?? null);
+      } else {
+        // Insert before over card
+        const beforeId = targetCardIds[overIndex - 1];
+        const beforeCard = beforeId ? board.cardsById[beforeId] : null;
+        newPosition = generateKeyBetween(beforeCard?.position ?? null, overCard.position);
+      }
+    } else {
+      // Dropped on empty column - add at end
+      const lastId = targetCardIds[targetCardIds.length - 1];
+      const lastCard = lastId ? board.cardsById[lastId] : null;
+      newPosition = generateKeyBetween(lastCard?.position ?? null, null);
+    }
+
+    // Only mutate if something changed
+    if (activeCard.columnId !== targetColumnId || activeCard.position !== newPosition) {
+      moveCard.mutate({
+        cardId: activeId,
+        columnId: targetColumnId,
+        position: newPosition,
+      });
     }
   };
 
   const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
-
-    if (!over) return;
-
-    const activeType = active.data.current?.type;
-    const overType = over.data.current?.type;
-
-    if (activeType !== "card") return;
-
-    // Find source and destination columns
-    const activeCard = active.data.current?.card as CardData;
-    let overColumnId: string;
-
-    if (overType === "column") {
-      overColumnId = over.id as string;
-    } else if (overType === "card") {
-      overColumnId = (over.data.current?.card as CardData).columnId;
-    } else {
+    if (!over || !board || !isCardDragData(active.data.current)) {
+      setDragState((prev) => ({ ...prev, targetColumnId: null, insertIndex: null }));
       return;
     }
 
-    if (activeCard.columnId !== overColumnId) {
-      // Update the active card's column (optimistic update will be handled by mutation)
-      setActiveCard((prev) => (prev ? { ...prev, columnId: overColumnId } : null));
-    }
-  };
+    const overId = over.id as string;
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    setDragState({ activeId: null, type: null });
-    setActiveCard(null);
-
-    if (!over || active.data.current?.type !== "card") return;
-
-    const activeCard = active.data.current.card as CardData;
+    // Determine target column
     const overCard = over.data.current?.card as CardData | undefined;
-    const targetColumnId = overCard?.columnId ?? (over.id as string);
+    const targetColumnId = getTargetColumnId(over);
 
-    // Cards in target column, excluding the dragged card
+    if (!targetColumnId) {
+      setDragState((prev) => ({ ...prev, targetColumnId: null, insertIndex: null }));
+      return;
+    }
+
+    // Calculate insertion index
     const targetCardIds = board.cardIdsByColumn[targetColumnId] ?? [];
-    const otherCardIds = targetCardIds.filter((id) => id !== activeCard.id);
-
-    // Determine insertion index
-    const overIndex = overCard ? otherCardIds.indexOf(overCard.id) : -1;
     let insertIndex: number;
 
-    if (overIndex === -1) {
-      insertIndex = otherCardIds.length; // Append at end
+    if (overCard) {
+      insertIndex = targetCardIds.indexOf(overId);
     } else {
-      // Determine if inserting before or after the target card
-      const isSameColumn = activeCard.columnId === targetColumnId;
-      const insertAfter = isSameColumn
-        ? targetCardIds.indexOf(activeCard.id) < targetCardIds.indexOf(overCard!.id)
-        : ((active.rect.current.translated?.top ?? 0) + (active.rect.current.translated?.height ?? 0) / 2) >
-          ((over.rect?.top ?? 0) + (over.rect?.height ?? 0) / 2);
-
-      insertIndex = insertAfter ? overIndex + 1 : overIndex;
+      // Hovering over empty column area - insert at end
+      insertIndex = targetCardIds.length;
     }
 
-    // Calculate fractional position between neighbors
-    const getPosition = (id: string | undefined) => id ? board.cardsById[id]?.position ?? null : null;
-    const newPosition = generateKeyBetween(
-      getPosition(otherCardIds[insertIndex - 1]),
-      getPosition(otherCardIds[insertIndex]),
-    );
+    setDragState((prev) => ({ ...prev, targetColumnId, insertIndex }));
+  };
 
-    // Mutate only if position or column changed
-    if (activeCard.columnId !== targetColumnId || activeCard.position !== newPosition) {
-      moveCard.mutate({ cardId: activeCard.id, columnId: targetColumnId, position: newPosition });
-    }
+  const handleDragCancel = () => {
+    setDragState(INITIAL_DRAG_STATE);
+    setActiveCard(null);
   };
 
   return (
@@ -160,6 +187,7 @@ export function Board() {
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
     >
       <div className="flex h-full gap-4 overflow-x-auto overscroll-x-contain p-4 [-webkit-overflow-scrolling:touch]">
         {board.columnIds.map((id) => (
@@ -172,8 +200,8 @@ export function Board() {
         ))}
       </div>
 
-      <DragOverlay dropAnimation={dropAnimationConfig} modifiers={[restrictToWindowEdges]}>
-        {activeCard && <Card card={activeCard} onDelete={() => {}} isDragOverlay />}
+      <DragOverlay modifiers={[restrictToWindowEdges]} dropAnimation={null}>
+        {activeCard && <Card card={activeCard} isDragOverlay />}
       </DragOverlay>
     </DndContext>
   );

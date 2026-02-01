@@ -1,13 +1,19 @@
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { cn } from "@repo/ui/lib/utils";
-import { useSetAtom } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import { MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useDeleteCard } from "~/hooks/use-cards";
 import { useDeleteColumn, useUpdateColumn } from "~/hooks/use-columns";
+import { dialogAtom, dragStateAtom } from "~/stores/kanban";
 import type { CardData, ColumnData } from "~/types/board";
-import { dialogAtom } from "~/stores/kanban";
 import { Card } from "./card";
+
+// Match card h-32 (128px) + gap-2 (8px) = 136px = 8.5rem
+const CARD_SLIDE_OFFSET = "8.5rem";
+
+// Touch-friendly button sizing for mobile
+const TOUCH_BUTTON_CLASS = "min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0";
 
 interface ColumnProps {
   column: ColumnData;
@@ -21,6 +27,13 @@ export function Column({ column, cardIds, cardsById }: ColumnProps) {
   const [showMenu, setShowMenu] = useState(false);
 
   const setDialog = useSetAtom(dialogAtom);
+  const dragState = useAtomValue(dragStateAtom);
+
+  // Visual feedback state
+  const isDropTarget =
+    dragState.activeId !== null && dragState.targetColumnId === column.id;
+  const isDraggingFromThisColumn = cardIds.includes(dragState.activeId ?? "");
+  const insertIndex = dragState.insertIndex;
 
   const updateColumn = useUpdateColumn();
   const deleteColumn = useDeleteColumn();
@@ -51,7 +64,8 @@ export function Column({ column, cardIds, cardsById }: ColumnProps) {
   return (
     <div
       className={cn(
-        "bg-muted/50 flex h-fit w-72 flex-shrink-0 flex-col rounded-lg border",
+        "bg-muted/50 flex h-fit w-72 flex-shrink-0 flex-col rounded-lg border transition-all duration-200",
+        isDropTarget && "ring-primary/50 bg-primary/5 ring-2",
       )}
     >
       {/* Column Header */}
@@ -88,7 +102,10 @@ export function Column({ column, cardIds, cardsById }: ColumnProps) {
           <button
             type="button"
             onClick={() => setShowMenu(!showMenu)}
-            className="text-muted-foreground hover:text-foreground hover:bg-accent min-h-[44px] min-w-[44px] rounded p-2.5 sm:min-h-0 sm:min-w-0 sm:p-1"
+            className={cn(
+              "text-muted-foreground hover:text-foreground hover:bg-accent rounded p-2.5 sm:p-1",
+              TOUCH_BUTTON_CLASS,
+            )}
             aria-label="Column menu"
           >
             <MoreHorizontal className="h-5 w-5 sm:h-4 sm:w-4" />
@@ -115,10 +132,40 @@ export function Column({ column, cardIds, cardsById }: ColumnProps) {
       {/* Cards */}
       <div className="flex flex-1 flex-col gap-2 overflow-y-auto p-2 pt-0">
         <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
-          {cardIds.map((id) => {
+          {cardIds.map((id, idx) => {
             const card = cardsById[id];
             if (!card) return null;
-            return <Card key={id} card={card} onDelete={handleDeleteCard} />;
+
+            // Collapse card in source column when dragging to different column
+            const isDraggingToOtherColumn =
+              id === dragState.activeId &&
+              dragState.targetColumnId !== null &&
+              dragState.targetColumnId !== column.id;
+
+            // Calculate if this card should slide down to make room
+            // Only slide cards after insertion point when dragging from another column
+            const shouldSlide =
+              isDropTarget &&
+              !isDraggingFromThisColumn &&
+              insertIndex !== null &&
+              idx >= insertIndex;
+
+            return (
+              <div
+                key={id}
+                className={cn(
+                  "transition-all duration-150 ease-out",
+                  isDraggingToOtherColumn && "-my-1 h-0 opacity-0",
+                )}
+                style={{
+                  transform: shouldSlide
+                    ? `translateY(${CARD_SLIDE_OFFSET})`
+                    : "translateY(0)",
+                }}
+              >
+                <Card card={card} onDelete={handleDeleteCard} />
+              </div>
+            );
           })}
         </SortableContext>
 
