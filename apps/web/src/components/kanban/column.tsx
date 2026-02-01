@@ -5,32 +5,17 @@ import { MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useDeleteCard } from "~/hooks/use-cards";
 import { useDeleteColumn, useUpdateColumn } from "~/hooks/use-columns";
-import { comparePosition } from "~/lib/position";
+import type { CardData, ColumnData } from "~/types/board";
 import { dialogAtom } from "~/stores/kanban";
 import { Card } from "./card";
 
-interface CardData {
-  id: string;
-  title: string;
-  description: string | null;
-  priority: string | null;
-  tags: string | null;
-  position: string;
-  columnId: string;
-}
-
-interface ColumnData {
-  id: string;
-  name: string;
-  position: number;
-  cards: CardData[];
-}
-
 interface ColumnProps {
   column: ColumnData;
+  cardIds: string[]; // Already sorted
+  cardsById: Record<string, CardData>;
 }
 
-export function Column({ column }: ColumnProps) {
+export function Column({ column, cardIds, cardsById }: ColumnProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(column.name);
   const [showMenu, setShowMenu] = useState(false);
@@ -40,13 +25,6 @@ export function Column({ column }: ColumnProps) {
   const updateColumn = useUpdateColumn();
   const deleteColumn = useDeleteColumn();
   const deleteCard = useDeleteCard();
-
-  // Sort cards by position - SortableContext requires items in render order
-  const sortedCards = [...column.cards].sort((a, b) =>
-    comparePosition(a.position, b.position),
-  );
-
-  const cardIds = sortedCards.map((card) => card.id);
 
   const handleNameSubmit = () => {
     if (name.trim() && name !== column.name) {
@@ -104,7 +82,7 @@ export function Column({ column }: ColumnProps) {
           </button>
         )}
 
-        <span className="text-muted-foreground text-xs">{sortedCards.length}</span>
+        <span className="text-muted-foreground text-xs">{cardIds.length}</span>
 
         <div className="relative">
           <button
@@ -137,9 +115,11 @@ export function Column({ column }: ColumnProps) {
       {/* Cards */}
       <div className="flex flex-1 flex-col gap-2 overflow-y-auto p-2 pt-0">
         <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
-          {sortedCards.map((card) => (
-            <Card key={card.id} card={card} onDelete={handleDeleteCard} />
-          ))}
+          {cardIds.map((id) => {
+            const card = cardsById[id];
+            if (!card) return null;
+            return <Card key={id} card={card} onDelete={handleDeleteCard} />;
+          })}
         </SortableContext>
 
         {/* Add Card Button */}

@@ -33,19 +33,21 @@ export function useCreateColumn() {
       queryClient.setQueryData<BoardData>(queryKey, (old) => {
         if (!old) return old;
 
+        const tempId = `temp-${Date.now()}`;
         const newColumn = {
-          id: `temp-${Date.now()}`,
+          id: tempId,
           name: input.name,
-          position: old.columns.length,
+          position: old.columnIds.length,
           boardId: input.boardId,
-          cards: [],
           createdAt: new Date(),
           updatedAt: new Date(),
         };
 
         return {
           ...old,
-          columns: [...old.columns, newColumn],
+          columnIds: [...old.columnIds, tempId],
+          columnsById: { ...old.columnsById, [tempId]: newColumn },
+          cardIdsByColumn: { ...old.cardIdsByColumn, [tempId]: [] },
         };
       });
 
@@ -78,16 +80,19 @@ export function useUpdateColumn() {
       queryClient.setQueryData<BoardData>(queryKey, (old) => {
         if (!old) return old;
 
-        const columns = old.columns.map((col) => {
-          if (col.id !== input.id) return col;
-          return {
-            ...col,
-            name: input.name ?? col.name,
-            updatedAt: new Date(),
-          };
-        });
+        const column = old.columnsById[input.id];
+        if (!column) return old;
 
-        return { ...old, columns };
+        const updatedColumn = {
+          ...column,
+          name: input.name ?? column.name,
+          updatedAt: new Date(),
+        };
+
+        return {
+          ...old,
+          columnsById: { ...old.columnsById, [input.id]: updatedColumn },
+        };
       });
 
       return { previous };
@@ -119,11 +124,39 @@ export function useDeleteColumn() {
       queryClient.setQueryData<BoardData>(queryKey, (old) => {
         if (!old) return old;
 
-        const columns = old.columns
-          .filter((col) => col.id !== input.id)
-          .map((col, idx) => ({ ...col, position: idx }));
+        // Remove from columnIds
+        const columnIds = old.columnIds.filter((id) => id !== input.id);
 
-        return { ...old, columns };
+        // Remove from columnsById
+        const { [input.id]: _removedCol, ...columnsById } = old.columnsById;
+        void _removedCol;
+
+        // Remove cards that belong to this column from cardsById
+        const cardIdsToRemove = old.cardIdsByColumn[input.id] ?? [];
+        const cardsById = { ...old.cardsById };
+        for (const cardId of cardIdsToRemove) {
+          delete cardsById[cardId];
+        }
+
+        // Remove from cardIdsByColumn
+        const { [input.id]: _removedCards, ...cardIdsByColumn } = old.cardIdsByColumn;
+        void _removedCards;
+
+        // Update column positions
+        const updatedColumnsById = { ...columnsById };
+        columnIds.forEach((id, idx) => {
+          if (updatedColumnsById[id]!.position !== idx) {
+            updatedColumnsById[id] = { ...updatedColumnsById[id]!, position: idx };
+          }
+        });
+
+        return {
+          ...old,
+          columnIds,
+          columnsById: updatedColumnsById,
+          cardsById,
+          cardIdsByColumn,
+        };
       });
 
       return { previous };

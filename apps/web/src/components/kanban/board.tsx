@@ -16,24 +16,14 @@ import {
 import { restrictToWindowEdges } from "@dnd-kit/modifiers";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { generateKeyBetween } from "fractional-indexing";
-import { useAtom } from "jotai";
+import { useSetAtom } from "jotai";
 import { useState } from "react";
 import { useBoard } from "~/hooks/use-board";
 import { useMoveCard } from "~/hooks/use-cards";
-import { comparePosition } from "~/lib/position";
+import type { CardData } from "~/types/board";
 import { dragStateAtom } from "~/stores/kanban";
 import { Card } from "./card";
 import { Column } from "./column";
-
-interface CardData {
-  id: string;
-  title: string;
-  description: string | null;
-  priority: string | null;
-  tags: string | null;
-  position: string; // Fractional index
-  columnId: string;
-}
 
 // Drop animation config for smooth card placement
 const dropAnimationConfig: DropAnimation = {
@@ -48,7 +38,7 @@ const dropAnimationConfig: DropAnimation = {
 
 export function Board() {
   const { data: board } = useBoard();
-  const [dragState, setDragState] = useAtom(dragStateAtom);
+  const setDragState = useSetAtom(dragStateAtom);
   const moveCard = useMoveCard();
 
   const [activeCard, setActiveCard] = useState<CardData | null>(null);
@@ -120,67 +110,46 @@ export function Board() {
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-
     setDragState({ activeId: null, type: null });
     setActiveCard(null);
 
-    if (!over) return;
-    if (active.data.current?.type !== "card") return;
+    if (!over || active.data.current?.type !== "card") return;
 
     const activeCard = active.data.current.card as CardData;
-    const overType = over.data.current?.type;
+    const overCard = over.data.current?.card as CardData | undefined;
+    const targetColumnId = overCard?.columnId ?? (over.id as string);
 
-    // Determine target column
-    const targetColumnId =
-      overType === "column"
-        ? (over.id as string)
-        : (over.data.current?.card as CardData).columnId;
+    // Cards in target column, excluding the dragged card
+    const targetCardIds = board.cardIdsByColumn[targetColumnId] ?? [];
+    const otherCardIds = targetCardIds.filter((id) => id !== activeCard.id);
 
-    // Get sorted cards in target column (excluding the dragged card)
-    const targetColumn = board!.columns.find((col) => col.id === targetColumnId);
-    const sortedCards = [...(targetColumn?.cards ?? [])]
-      .filter((c) => c.id !== activeCard.id)
-      .sort((a, b) => comparePosition(a.position, b.position));
-
-    // Find insertion index
+    // Determine insertion index
+    const overIndex = overCard ? otherCardIds.indexOf(overCard.id) : -1;
     let insertIndex: number;
-    if (overType === "column") {
-      insertIndex = sortedCards.length; // Append at end
+
+    if (overIndex === -1) {
+      insertIndex = otherCardIds.length; // Append at end
     } else {
-      const overCard = over.data.current?.card as CardData;
-      const overIndex = sortedCards.findIndex((c) => c.id === overCard.id);
+      // Determine if inserting before or after the target card
+      const isSameColumn = activeCard.columnId === targetColumnId;
+      const insertAfter = isSameColumn
+        ? targetCardIds.indexOf(activeCard.id) < targetCardIds.indexOf(overCard!.id)
+        : ((active.rect.current.translated?.top ?? 0) + (active.rect.current.translated?.height ?? 0) / 2) >
+          ((over.rect?.top ?? 0) + (over.rect?.height ?? 0) / 2);
 
-      if (overIndex === -1) {
-        insertIndex = sortedCards.length;
-      } else {
-        // Determine insert position based on drag direction
-        const isSameColumn = activeCard.columnId === targetColumnId;
-        const activeIndex = isSameColumn
-          ? sortedCards.findIndex((c) => c.id === activeCard.id)
-          : -1;
-
-        // If dragging down (or cross-column), insert after over card
-        // If dragging up, insert before over card
-        const isDraggingDown = !isSameColumn || activeIndex < overIndex;
-        insertIndex = isDraggingDown ? overIndex + 1 : overIndex;
-      }
+      insertIndex = insertAfter ? overIndex + 1 : overIndex;
     }
 
     // Calculate fractional position between neighbors
-    const prevCard = sortedCards[insertIndex - 1];
-    const nextCard = sortedCards[insertIndex];
+    const getPosition = (id: string | undefined) => id ? board.cardsById[id]?.position ?? null : null;
     const newPosition = generateKeyBetween(
-      prevCard?.position ?? null,
-      nextCard?.position ?? null,
+      getPosition(otherCardIds[insertIndex - 1]),
+      getPosition(otherCardIds[insertIndex]),
     );
 
-    // Only mutate if something changed
+    // Mutate only if position or column changed
     if (activeCard.columnId !== targetColumnId || activeCard.position !== newPosition) {
-      moveCard.mutate({
-        cardId: activeCard.id,
-        columnId: targetColumnId,
-        position: newPosition,
-      });
+      moveCard.mutate({ cardId: activeCard.id, columnId: targetColumnId, position: newPosition });
     }
   };
 
@@ -193,18 +162,18 @@ export function Board() {
       onDragEnd={handleDragEnd}
     >
       <div className="flex h-full gap-4 overflow-x-auto overscroll-x-contain p-4 [-webkit-overflow-scrolling:touch]">
-        {board.columns.map((column) => (
-          <Column key={column.id} column={column} />
+        {board.columnIds.map((id) => (
+          <Column
+            key={id}
+            column={board.columnsById[id]!}
+            cardIds={board.cardIdsByColumn[id] ?? []}
+            cardsById={board.cardsById}
+          />
         ))}
       </div>
 
-      <DragOverlay
-        dropAnimation={dropAnimationConfig}
-        modifiers={[restrictToWindowEdges]}
-      >
-        {dragState.type === "card" && activeCard && (
-          <Card card={activeCard} onDelete={() => {}} isDragOverlay />
-        )}
+      <DragOverlay dropAnimation={dropAnimationConfig} modifiers={[restrictToWindowEdges]}>
+        {activeCard && <Card card={activeCard} onDelete={() => {}} isDragOverlay />}
       </DragOverlay>
     </DndContext>
   );

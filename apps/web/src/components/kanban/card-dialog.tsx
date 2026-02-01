@@ -20,11 +20,7 @@ export function CardDialog() {
 
   // Find existing card data if editing
   const existingCard =
-    dialog.mode === "edit" && dialog.cardId
-      ? board?.columns
-          .flatMap((col) => col.cards)
-          .find((card) => card.id === dialog.cardId)
-      : null;
+    dialog.mode === "edit" && dialog.cardId ? board?.cardsById[dialog.cardId] : null;
 
   useEffect(() => {
     if (dialog.open) {

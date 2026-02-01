@@ -3,17 +3,8 @@ import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@repo/ui/lib/utils";
 import { useSetAtom } from "jotai";
 import { GripVertical, Pencil, Trash2 } from "lucide-react";
+import type { CardData } from "~/types/board";
 import { dialogAtom } from "~/stores/kanban";
-
-interface CardData {
-  id: string;
-  title: string;
-  description: string | null;
-  priority: string | null;
-  tags: string | null;
-  position: string; // Fractional index
-  columnId: string;
-}
 
 interface CardProps {
   card: CardData;

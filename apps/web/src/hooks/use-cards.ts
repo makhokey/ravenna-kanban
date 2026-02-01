@@ -32,50 +32,48 @@ type DeleteCardInput = {
   id: string;
 };
 
-// Helper to update card position in board data (for optimistic updates)
-// With fractional indexing, we only update the moved card - no shifting needed!
-function updateCardInBoard(
+// Helper: Update card position in normalized board (for optimistic updates)
+function moveCardInBoard(
   board: BoardData,
   cardId: string,
   targetColumnId: string,
-  targetPosition: string,
+  newPosition: string,
 ): BoardData {
-  if (!board) return board;
+  const card = board.cardsById[cardId]; 
+  if (!card) return board;
 
-  const columns = board.columns.map((col) => ({
-    ...col,
-    cards: col.cards
-      .filter((c) => c.id !== cardId) // Remove card from all columns
-      .map((c) => ({ ...c })),
-  }));
+  const sourceColumnId = card.columnId;
 
-  // Find the original card
-  let movedCard: (typeof board.columns)[0]["cards"][0] | null = null;
-  for (const col of board.columns) {
-    const card = col.cards.find((c) => c.id === cardId);
-    if (card) {
-      movedCard = card;
-      break;
-    }
-  }
+  // Update card
+  const updatedCard = { ...card, columnId: targetColumnId, position: newPosition };
 
-  if (!movedCard) return board;
+  // Update lookup tables
+  const cardsById = { ...board.cardsById, [cardId]: updatedCard };
 
-  const targetColumnIdx = columns.findIndex((c) => c.id === targetColumnId);
-  if (targetColumnIdx === -1) return board;
+  // Update source column's card IDs (remove)
+  const sourceCardIds = board.cardIdsByColumn[sourceColumnId]!.filter(
+    (id) => id !== cardId,
+  );
 
-  // Add card to target column with new position
-  const updatedCard = {
-    ...movedCard,
-    columnId: targetColumnId,
-    position: targetPosition,
+  // Update target column's card IDs (insert sorted)
+  const targetCardIds =
+    sourceColumnId === targetColumnId
+      ? sourceCardIds
+      : [...board.cardIdsByColumn[targetColumnId]!];
+
+  // Insert at correct position (find insertion point)
+  const insertIdx = targetCardIds.findIndex(
+    (id) => comparePosition(cardsById[id]!.position, newPosition) > 0,
+  );
+  targetCardIds.splice(insertIdx === -1 ? targetCardIds.length : insertIdx, 0, cardId);
+
+  const cardIdsByColumn = {
+    ...board.cardIdsByColumn,
+    [sourceColumnId]: sourceCardIds,
+    [targetColumnId]: targetCardIds,
   };
-  columns[targetColumnIdx]!.cards.push(updatedCard);
 
-  // Sort cards by position (fractional index string comparison)
-  columns[targetColumnIdx]!.cards.sort((a, b) => comparePosition(a.position, b.position));
-
-  return { ...board, columns };
+  return { ...board, cardsById, cardIdsByColumn };
 }
 
 export function useCreateCard() {
@@ -96,36 +94,35 @@ export function useCreateCard() {
         if (!old) return old;
 
         const tempId = `temp-${Date.now()}`;
-        const columns = old.columns.map((col) => {
-          if (col.id !== input.columnId) return col;
+        const columnCardIds = old.cardIdsByColumn[input.columnId] ?? [];
 
-          // Get last card's position for fractional indexing
-          const sortedCards = [...col.cards].sort((a, b) =>
-            comparePosition(a.position, b.position),
-          );
-          const lastPosition =
-            sortedCards.length > 0 ? sortedCards[sortedCards.length - 1]!.position : null;
-          const newPosition = generateKeyBetween(lastPosition, null);
+        // Get last card's position for fractional indexing
+        const lastCardId = columnCardIds[columnCardIds.length - 1];
+        const lastPosition = lastCardId
+          ? (old.cardsById[lastCardId]?.position ?? null)
+          : null;
+        const newPosition = generateKeyBetween(lastPosition, null);
 
-          const newCard = {
-            id: tempId,
-            title: input.title,
-            description: input.description ?? null,
-            columnId: input.columnId,
-            priority: input.priority ?? null,
-            tags: input.tags ? JSON.stringify(input.tags) : null,
-            position: newPosition,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          };
+        const newCard = {
+          id: tempId,
+          title: input.title,
+          description: input.description ?? null,
+          columnId: input.columnId,
+          priority: input.priority ?? null,
+          tags: input.tags ? JSON.stringify(input.tags) : null,
+          position: newPosition,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
 
-          return {
-            ...col,
-            cards: [...col.cards, newCard],
-          };
-        });
-
-        return { ...old, columns };
+        return {
+          ...old,
+          cardsById: { ...old.cardsById, [tempId]: newCard },
+          cardIdsByColumn: {
+            ...old.cardIdsByColumn,
+            [input.columnId]: [...columnCardIds, tempId],
+          },
+        };
       });
 
       return { previous };
@@ -155,28 +152,27 @@ export function useUpdateCard() {
 
       const previous = queryClient.getQueryData<BoardData>(queryKey);
 
-      // Optimistically update the card
+      // Optimistically update the card 
       queryClient.setQueryData<BoardData>(queryKey, (old) => {
         if (!old) return old;
 
-        const columns = old.columns.map((col) => ({
-          ...col,
-          cards: col.cards.map((card) => {
-            if (card.id !== input.id) return card;
+        const card = old.cardsById[input.id];
+        if (!card) return old;
 
-            return {
-              ...card,
-              title: input.title ?? card.title,
-              description:
-                input.description !== undefined ? input.description : card.description,
-              priority: input.priority !== undefined ? input.priority : card.priority,
-              tags: input.tags !== undefined ? JSON.stringify(input.tags) : card.tags,
-              updatedAt: new Date(),
-            };
-          }),
-        }));
+        const updatedCard = {
+          ...card,
+          title: input.title ?? card.title,
+          description:
+            input.description !== undefined ? input.description : card.description,
+          priority: input.priority !== undefined ? input.priority : card.priority,
+          tags: input.tags !== undefined ? JSON.stringify(input.tags) : card.tags,
+          updatedAt: new Date(),
+        };
 
-        return { ...old, columns };
+        return {
+          ...old,
+          cardsById: { ...old.cardsById, [input.id]: updatedCard },
+        };
       });
 
       return { previous };
@@ -207,7 +203,7 @@ export function useMoveCard() {
       // Optimistically move the card
       queryClient.setQueryData<BoardData>(queryKey, (old) => {
         if (!old) return old;
-        return updateCardInBoard(old, input.cardId, input.columnId, input.position);
+        return moveCardInBoard(old, input.cardId, input.columnId, input.position);
       });
 
       return { previous };
@@ -239,12 +235,22 @@ export function useDeleteCard() {
       queryClient.setQueryData<BoardData>(queryKey, (old) => {
         if (!old) return old;
 
-        const columns = old.columns.map((col) => ({
-          ...col,
-          cards: col.cards.filter((card) => card.id !== input.id),
-        }));
+        const card = old.cardsById[input.id];
+        if (!card) return old;
 
-        return { ...old, columns };
+        // Remove from cardsById
+        const { [input.id]: _removed, ...cardsById } = old.cardsById;
+        void _removed;
+
+        // Remove from cardIdsByColumn
+        const cardIdsByColumn = {
+          ...old.cardIdsByColumn,
+          [card.columnId]: old.cardIdsByColumn[card.columnId]!.filter(
+            (id) => id !== input.id,
+          ),
+        };
+
+        return { ...old, cardsById, cardIdsByColumn };
       });
 
       return { previous };
