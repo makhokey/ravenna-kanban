@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { generateKeyBetween } from "fractional-indexing";
 import { toast } from "sonner";
+import { comparePosition } from "~/lib/position";
 import { createCard, deleteCard, moveCard, updateCard } from "~/server/cards";
 import { boardKeys } from "./query-keys";
 import { BoardData, DEFAULT_BOARD_ID } from "./use-board";
@@ -23,7 +25,7 @@ type UpdateCardInput = {
 type MoveCardInput = {
   cardId: string;
   columnId: string;
-  position: number;
+  position: string; // Fractional index
 };
 
 type DeleteCardInput = {
@@ -31,59 +33,47 @@ type DeleteCardInput = {
 };
 
 // Helper to update card position in board data (for optimistic updates)
+// With fractional indexing, we only update the moved card - no shifting needed!
 function updateCardInBoard(
   board: BoardData,
   cardId: string,
   targetColumnId: string,
-  targetPosition: number,
+  targetPosition: string,
 ): BoardData {
   if (!board) return board;
 
   const columns = board.columns.map((col) => ({
     ...col,
-    cards: [...col.cards],
+    cards: col.cards
+      .filter((c) => c.id !== cardId) // Remove card from all columns
+      .map((c) => ({ ...c })),
   }));
 
-  // Find the card and its source column
-  let sourceColumnIdx = -1;
-  let cardIdx = -1;
-  let movedCard: (typeof columns)[0]["cards"][0] | null = null;
-
-  for (let i = 0; i < columns.length; i++) {
-    const idx = columns[i]!.cards.findIndex((c) => c.id === cardId);
-    if (idx !== -1) {
-      sourceColumnIdx = i;
-      cardIdx = idx;
-      movedCard = columns[i]!.cards[idx]!;
+  // Find the original card
+  let movedCard: (typeof board.columns)[0]["cards"][0] | null = null;
+  for (const col of board.columns) {
+    const card = col.cards.find((c) => c.id === cardId);
+    if (card) {
+      movedCard = card;
       break;
     }
   }
 
-  if (!movedCard || sourceColumnIdx === -1) return board;
+  if (!movedCard) return board;
 
   const targetColumnIdx = columns.findIndex((c) => c.id === targetColumnId);
   if (targetColumnIdx === -1) return board;
 
-  // Remove from source
-  columns[sourceColumnIdx]!.cards.splice(cardIdx, 1);
-
-  // Update positions in source column
-  columns[sourceColumnIdx]!.cards.forEach((card, i) => {
-    card.position = i;
-  });
-
-  // Insert at target position
+  // Add card to target column with new position
   const updatedCard = {
     ...movedCard,
     columnId: targetColumnId,
     position: targetPosition,
   };
-  columns[targetColumnIdx]!.cards.splice(targetPosition, 0, updatedCard);
+  columns[targetColumnIdx]!.cards.push(updatedCard);
 
-  // Update positions in target column
-  columns[targetColumnIdx]!.cards.forEach((card, i) => {
-    card.position = i;
-  });
+  // Sort cards by position (fractional index string comparison)
+  columns[targetColumnIdx]!.cards.sort((a, b) => comparePosition(a.position, b.position));
 
   return { ...board, columns };
 }
@@ -109,6 +99,14 @@ export function useCreateCard() {
         const columns = old.columns.map((col) => {
           if (col.id !== input.columnId) return col;
 
+          // Get last card's position for fractional indexing
+          const sortedCards = [...col.cards].sort((a, b) =>
+            comparePosition(a.position, b.position),
+          );
+          const lastPosition =
+            sortedCards.length > 0 ? sortedCards[sortedCards.length - 1]!.position : null;
+          const newPosition = generateKeyBetween(lastPosition, null);
+
           const newCard = {
             id: tempId,
             title: input.title,
@@ -116,7 +114,7 @@ export function useCreateCard() {
             columnId: input.columnId,
             priority: input.priority ?? null,
             tags: input.tags ? JSON.stringify(input.tags) : null,
-            position: col.cards.length,
+            position: newPosition,
             createdAt: new Date(),
             updatedAt: new Date(),
           };
@@ -243,9 +241,7 @@ export function useDeleteCard() {
 
         const columns = old.columns.map((col) => ({
           ...col,
-          cards: col.cards
-            .filter((card) => card.id !== input.id)
-            .map((card, idx) => ({ ...card, position: idx })),
+          cards: col.cards.filter((card) => card.id !== input.id),
         }));
 
         return { ...old, columns };

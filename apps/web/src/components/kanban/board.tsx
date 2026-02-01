@@ -4,15 +4,23 @@ import {
   DragOverEvent,
   DragOverlay,
   DragStartEvent,
+  KeyboardSensor,
   PointerSensor,
-  closestCorners,
+  TouchSensor,
+  closestCenter,
+  defaultDropAnimationSideEffects,
   useSensor,
   useSensors,
+  type DropAnimation,
 } from "@dnd-kit/core";
+import { restrictToWindowEdges } from "@dnd-kit/modifiers";
+import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import { generateKeyBetween } from "fractional-indexing";
 import { useAtom, useAtomValue } from "jotai";
 import { useMemo, useState } from "react";
 import { useBoard } from "~/hooks/use-board";
 import { useMoveCard } from "~/hooks/use-cards";
+import { comparePosition } from "~/lib/position";
 import { dragStateAtom, filterAtom, groupByAtom } from "~/stores/kanban";
 import { Card } from "./card";
 import { Column } from "./column";
@@ -24,9 +32,20 @@ interface CardData {
   description: string | null;
   priority: string | null;
   tags: string | null;
-  position: number;
+  position: string; // Fractional index
   columnId: string;
 }
+
+// Drop animation config for smooth card placement
+const dropAnimationConfig: DropAnimation = {
+  sideEffects: defaultDropAnimationSideEffects({
+    styles: {
+      active: {
+        opacity: "0.5",
+      },
+    },
+  }),
+};
 
 export function Board() {
   const { data: board } = useBoard();
@@ -42,6 +61,15 @@ export function Board() {
       activationConstraint: {
         distance: 8,
       },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
 
@@ -76,7 +104,7 @@ export function Board() {
           : "No Priority",
         cards: filteredCards
           .filter((card) => card.priority === priority)
-          .sort((a, b) => a.position - b.position),
+          .sort((a, b) => comparePosition(a.position, b.position)),
       }));
     }
 
@@ -101,7 +129,7 @@ export function Board() {
       return Array.from(tagMap.entries()).map(([tag, cards]) => ({
         id: `tag-${tag}`,
         name: tag === "untagged" ? "Untagged" : tag,
-        cards: cards.sort((a, b) => a.position - b.position),
+        cards: cards.sort((a, b) => comparePosition(a.position, b.position)),
       }));
     }
 
@@ -162,49 +190,70 @@ export function Board() {
     setDragState({ activeId: null, type: null });
     setActiveCard(null);
 
-    if (!over) return;
+    if (!over || groupBy !== "column") return;
+    if (active.data.current?.type !== "card") return;
 
-    const activeType = active.data.current?.type;
+    const activeCard = active.data.current.card as CardData;
+    const overType = over.data.current?.type;
 
-    if (activeType === "card" && groupBy === "column") {
-      const activeCard = active.data.current?.card as CardData;
-      const overType = over.data.current?.type;
+    // Determine target column
+    const targetColumnId =
+      overType === "column"
+        ? (over.id as string)
+        : (over.data.current?.card as CardData).columnId;
 
-      let targetColumnId: string;
-      let targetPosition: number;
+    // Get sorted cards in target column (excluding the dragged card)
+    const targetColumn = board!.columns.find((col) => col.id === targetColumnId);
+    const sortedCards = [...(targetColumn?.cards ?? [])]
+      .filter((c) => c.id !== activeCard.id)
+      .sort((a, b) => comparePosition(a.position, b.position));
 
-      if (overType === "column") {
-        // Dropped on empty column
-        targetColumnId = over.id as string;
-        const targetColumn = board!.columns.find((col) => col.id === targetColumnId);
-        targetPosition = targetColumn?.cards.length ?? 0;
-      } else if (overType === "card") {
-        // Dropped on another card
-        const overCard = over.data.current?.card as CardData;
-        targetColumnId = overCard.columnId;
-        targetPosition = overCard.position;
+    // Find insertion index
+    let insertIndex: number;
+    if (overType === "column") {
+      insertIndex = sortedCards.length; // Append at end
+    } else {
+      const overCard = over.data.current?.card as CardData;
+      const overIndex = sortedCards.findIndex((c) => c.id === overCard.id);
+
+      if (overIndex === -1) {
+        insertIndex = sortedCards.length;
       } else {
-        return;
-      }
+        // Determine insert position based on drag direction
+        const isSameColumn = activeCard.columnId === targetColumnId;
+        const activeIndex = isSameColumn
+          ? sortedCards.findIndex((c) => c.id === activeCard.id)
+          : -1;
 
-      // Only update if something changed
-      if (
-        activeCard.columnId !== targetColumnId ||
-        activeCard.position !== targetPosition
-      ) {
-        moveCard.mutate({
-          cardId: activeCard.id,
-          columnId: targetColumnId,
-          position: targetPosition,
-        });
+        // If dragging down (or cross-column), insert after over card
+        // If dragging up, insert before over card
+        const isDraggingDown = !isSameColumn || activeIndex < overIndex;
+        insertIndex = isDraggingDown ? overIndex + 1 : overIndex;
       }
+    }
+
+    // Calculate fractional position between neighbors
+    const prevCard = sortedCards[insertIndex - 1];
+    const nextCard = sortedCards[insertIndex];
+    const newPosition = generateKeyBetween(
+      prevCard?.position ?? null,
+      nextCard?.position ?? null,
+    );
+
+    // Only mutate if something changed
+    if (activeCard.columnId !== targetColumnId || activeCard.position !== newPosition) {
+      moveCard.mutate({
+        cardId: activeCard.id,
+        columnId: targetColumnId,
+        position: newPosition,
+      });
     }
   };
 
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={closestCenter}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
@@ -212,14 +261,17 @@ export function Board() {
       <div className="flex h-full gap-4 overflow-x-auto overscroll-x-contain p-4 [-webkit-overflow-scrolling:touch]">
         {groupBy === "column"
           ? board.columns.map((column) => <Column key={column.id} column={column} />)
-          : groupedColumns?.map((group) => <GroupedColumn key={group.id} group={group} />)}
+          : groupedColumns?.map((group) => (
+              <GroupedColumn key={group.id} group={group} />
+            ))}
       </div>
 
-      <DragOverlay>
+      <DragOverlay
+        dropAnimation={dropAnimationConfig}
+        modifiers={[restrictToWindowEdges]}
+      >
         {dragState.type === "card" && activeCard && (
-          <div className="rotate-3 opacity-90">
-            <Card card={activeCard} onDelete={() => {}} />
-          </div>
+          <Card card={activeCard} onDelete={() => {}} isDragOverlay />
         )}
       </DragOverlay>
     </DndContext>

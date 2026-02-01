@@ -8,7 +8,7 @@ interface CardData {
   description: string | null;
   priority: string | null;
   tags: string | null;
-  position: number;
+  position: string;
   columnId: string;
 }
 

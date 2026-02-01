@@ -23,7 +23,7 @@ export const cards = sqliteTable("cards", {
   id: text("id").primaryKey(),
   title: text("title").notNull(),
   description: text("description"),
-  position: integer("position").notNull(),
+  position: text("position").notNull(),
   priority: text("priority"), // low, medium, high
   tags: text("tags"), // JSON array as string
   columnId: text("column_id")

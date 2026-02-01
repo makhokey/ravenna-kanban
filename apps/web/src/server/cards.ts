@@ -1,6 +1,7 @@
 import { cards, columns } from "@repo/db/schema";
 import { createServerFn } from "@tanstack/react-start";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
+import { generateKeyBetween } from "fractional-indexing";
 import { getDb } from "~/lib/db";
 import { invalidateBoardCache } from "./cache";
 
@@ -43,11 +44,18 @@ export const createCard = createServerFn({ method: "POST" })
     // Get column to find boardId for cache invalidation
     const [column] = await db.select().from(columns).where(eq(columns.id, data.columnId));
 
-    // Get max position in column
-    const [maxPos] = await db
-      .select({ max: sql<number>`MAX(position)` })
+    // Get the last card's position in the column to append after it
+    const existingCards = await db
+      .select({ position: cards.position })
       .from(cards)
-      .where(eq(cards.columnId, data.columnId));
+      .where(eq(cards.columnId, data.columnId))
+      .orderBy(cards.position);
+
+    const lastPosition =
+      existingCards.length > 0 ? existingCards[existingCards.length - 1]!.position : null;
+
+    // Generate a position after the last card (or first position if empty)
+    const position = generateKeyBetween(lastPosition, null);
 
     await db.insert(cards).values({
       id,
@@ -56,7 +64,7 @@ export const createCard = createServerFn({ method: "POST" })
       columnId: data.columnId,
       priority: data.priority ?? null,
       tags: data.tags ? JSON.stringify(data.tags) : null,
-      position: (maxPos?.max ?? -1) + 1,
+      position,
       createdAt: now,
       updatedAt: now,
     });
@@ -71,76 +79,30 @@ export const createCard = createServerFn({ method: "POST" })
 
 // Move card (change column and/or position)
 export const moveCard = createServerFn({ method: "POST" })
-  .inputValidator((data: { cardId: string; columnId: string; position: number }) => data)
+  .inputValidator((data: { cardId: string; columnId: string; position: string }) => data)
   .handler(async ({ data }) => {
     const db = getDb();
     const { cardId, columnId, position } = data;
 
-    // Get current card
-    const [current] = await db.select().from(cards).where(eq(cards.id, cardId));
-    if (!current) throw new Error("Card not found");
+    try {
+      // Get column to find boardId for cache invalidation
+      const [column] = await db.select().from(columns).where(eq(columns.id, columnId));
 
-    // Get column to find boardId for cache invalidation
-    const [column] = await db.select().from(columns).where(eq(columns.id, columnId));
-
-    // Reorder within same column or across columns
-    await db.transaction(async (tx) => {
-      if (current.columnId === columnId) {
-        // Same column: shift cards between old and new position
-        if (position > current.position) {
-          await tx
-            .update(cards)
-            .set({ position: sql`position - 1` })
-            .where(
-              and(
-                eq(cards.columnId, columnId),
-                sql`position > ${current.position}`,
-                sql`position <= ${position}`,
-              ),
-            );
-        } else {
-          await tx
-            .update(cards)
-            .set({ position: sql`position + 1` })
-            .where(
-              and(
-                eq(cards.columnId, columnId),
-                sql`position >= ${position}`,
-                sql`position < ${current.position}`,
-              ),
-            );
-        }
-      } else {
-        // Different column: close gap in source, make space in target
-        await tx
-          .update(cards)
-          .set({ position: sql`position - 1` })
-          .where(
-            and(
-              eq(cards.columnId, current.columnId),
-              sql`position > ${current.position}`,
-            ),
-          );
-
-        await tx
-          .update(cards)
-          .set({ position: sql`position + 1` })
-          .where(and(eq(cards.columnId, columnId), sql`position >= ${position}`));
-      }
-
-      // Update the moved card
-      await tx
+      await db
         .update(cards)
         .set({ columnId, position, updatedAt: new Date() })
         .where(eq(cards.id, cardId));
-    });
 
-    // Invalidate cache
-    if (column) {
-      await invalidateBoardCache(column.boardId);
+      // Invalidate cache
+      if (column) {
+        await invalidateBoardCache(column.boardId);
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error("moveCard error:", error);
+      throw error;
     }
-
-    return { success: true };
   });
 
 // Update card

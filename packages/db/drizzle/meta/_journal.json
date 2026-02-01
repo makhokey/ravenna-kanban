@@ -8,6 +8,13 @@
       "when": 1769944848654,
       "tag": "0000_brown_magus",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1769951074328,
+      "tag": "0001_romantic_human_torch",
+      "breakpoints": true
     }
   ]
 }

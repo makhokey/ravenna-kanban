@@ -11,13 +11,14 @@ interface CardData {
   description: string | null;
   priority: string | null;
   tags: string | null;
-  position: number;
+  position: string; // Fractional index
   columnId: string;
 }
 
 interface CardProps {
   card: CardData;
   onDelete: (id: string) => void;
+  isDragOverlay?: boolean;
 }
 
 const priorityColors = {
@@ -26,7 +27,7 @@ const priorityColors = {
   high: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
 } as const;
 
-export function Card({ card, onDelete }: CardProps) {
+export function Card({ card, onDelete, isDragOverlay }: CardProps) {
   const setDialog = useSetAtom(dialogAtom);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -50,7 +51,8 @@ export function Card({ card, onDelete }: CardProps) {
         "bg-card text-card-foreground group relative rounded-lg border p-3 shadow-sm",
         "transition-all duration-200 ease-out",
         "hover:-translate-y-0.5 hover:shadow-md",
-        isDragging && "scale-105 rotate-2 opacity-50 shadow-lg",
+        isDragging && !isDragOverlay && "ring-primary/50 opacity-40 ring-2 ring-offset-2",
+        isDragOverlay && "scale-[1.02] rotate-2 cursor-grabbing shadow-xl",
       )}
     >
       <div className="flex items-start gap-2">

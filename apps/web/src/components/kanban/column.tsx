@@ -5,6 +5,7 @@ import { MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useDeleteCard } from "~/hooks/use-cards";
 import { useDeleteColumn, useUpdateColumn } from "~/hooks/use-columns";
+import { comparePosition } from "~/lib/position";
 import { dialogAtom, filterAtom } from "~/stores/kanban";
 import { Card } from "./card";
 
@@ -14,7 +15,7 @@ interface CardData {
   description: string | null;
   priority: string | null;
   tags: string | null;
-  position: number;
+  position: string;
   columnId: string;
 }
 
@@ -41,15 +42,17 @@ export function Column({ column }: ColumnProps) {
   const deleteColumn = useDeleteColumn();
   const deleteCard = useDeleteCard();
 
-  // Filter cards based on current filter
-  const filteredCards = column.cards.filter((card) => {
-    if (filter.priority && card.priority !== filter.priority) return false;
-    if (filter.tag) {
-      const tags: string[] = card.tags ? JSON.parse(card.tags) : [];
-      if (!tags.includes(filter.tag)) return false;
-    }
-    return true;
-  });
+  // Filter and sort cards - SortableContext requires items in render order
+  const filteredCards = column.cards
+    .filter((card) => {
+      if (filter.priority && card.priority !== filter.priority) return false;
+      if (filter.tag) {
+        const tags: string[] = card.tags ? JSON.parse(card.tags) : [];
+        if (!tags.includes(filter.tag)) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => comparePosition(a.position, b.position));
 
   const cardIds = filteredCards.map((card) => card.id);
 
