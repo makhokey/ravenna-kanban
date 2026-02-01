@@ -3,7 +3,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@repo/ui/lib/utils";
 import { useSetAtom } from "jotai";
 import { GripVertical, Pencil, Trash2 } from "lucide-react";
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { dialogAtom } from "~/stores/kanban";
 import type { CardData } from "~/types/board";
 import type { CardDragData } from "~/types/dnd";
@@ -22,7 +22,7 @@ const priorityColors = {
   high: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
 } as const;
 
-export function Card({ card, onDelete, isDragOverlay }: CardProps) {
+function CardComponent({ card, onDelete, isDragOverlay }: CardProps) {
   const setDialog = useSetAtom(dialogAtom);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -136,3 +136,17 @@ export function Card({ card, onDelete, isDragOverlay }: CardProps) {
     </div>
   );
 }
+
+export const Card = memo(CardComponent, (prev, next) => {
+  return (
+    prev.card.id === next.card.id &&
+    prev.card.updatedAt === next.card.updatedAt &&
+    prev.card.title === next.card.title &&
+    prev.card.description === next.card.description &&
+    prev.card.priority === next.card.priority &&
+    prev.card.tags === next.card.tags &&
+    prev.card.columnId === next.card.columnId &&
+    prev.isDragOverlay === next.isDragOverlay &&
+    prev.onDelete === next.onDelete
+  );
+});

@@ -2,10 +2,15 @@ import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { cn } from "@repo/ui/lib/utils";
 import { useAtomValue, useSetAtom } from "jotai";
 import { MoreHorizontal, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useDeleteCard } from "~/hooks/use-cards";
 import { useDeleteColumn, useUpdateColumn } from "~/hooks/use-columns";
-import { dialogAtom, dragStateAtom } from "~/stores/kanban";
+import {
+  activeIdAtom,
+  dialogAtom,
+  insertIndexAtom,
+  targetColumnIdAtom,
+} from "~/stores/kanban";
 import type { CardData, ColumnData } from "~/types/board";
 import { Card } from "./card";
 
@@ -27,13 +32,15 @@ export function Column({ column, cardIds, cardsById }: ColumnProps) {
   const [showMenu, setShowMenu] = useState(false);
 
   const setDialog = useSetAtom(dialogAtom);
-  const dragState = useAtomValue(dragStateAtom);
+
+  // Use granular selectors for drag state to minimize re-renders
+  const activeId = useAtomValue(activeIdAtom);
+  const targetColumnId = useAtomValue(targetColumnIdAtom);
+  const insertIndex = useAtomValue(insertIndexAtom);
 
   // Visual feedback state
-  const isDropTarget =
-    dragState.activeId !== null && dragState.targetColumnId === column.id;
-  const isDraggingFromThisColumn = cardIds.includes(dragState.activeId ?? "");
-  const insertIndex = dragState.insertIndex;
+  const isDropTarget = activeId !== null && targetColumnId === column.id;
+  const isDraggingFromThisColumn = cardIds.includes(activeId ?? "");
 
   const updateColumn = useUpdateColumn();
   const deleteColumn = useDeleteColumn();
@@ -57,9 +64,12 @@ export function Column({ column, cardIds, cardsById }: ColumnProps) {
     setShowMenu(false);
   };
 
-  const handleDeleteCard = (cardId: string) => {
-    deleteCard.mutate({ id: cardId });
-  };
+  const handleDeleteCard = useCallback(
+    (cardId: string) => {
+      deleteCard.mutate({ id: cardId });
+    },
+    [deleteCard],
+  );
 
   return (
     <div
@@ -138,9 +148,7 @@ export function Column({ column, cardIds, cardsById }: ColumnProps) {
 
             // Collapse card in source column when dragging to different column
             const isDraggingToOtherColumn =
-              id === dragState.activeId &&
-              dragState.targetColumnId !== null &&
-              dragState.targetColumnId !== column.id;
+              id === activeId && targetColumnId !== null && targetColumnId !== column.id;
 
             // Calculate if this card should slide down to make room
             // Only slide cards after insertion point when dragging from another column

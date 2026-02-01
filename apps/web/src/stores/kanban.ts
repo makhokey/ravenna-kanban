@@ -22,3 +22,8 @@ export const INITIAL_DRAG_STATE: DragState = {
 };
 
 export const dragStateAtom = atom<DragState>(INITIAL_DRAG_STATE);
+
+// Derived atoms for granular subscriptions
+export const activeIdAtom = atom((get) => get(dragStateAtom).activeId);
+export const targetColumnIdAtom = atom((get) => get(dragStateAtom).targetColumnId);
+export const insertIndexAtom = atom((get) => get(dragStateAtom).insertIndex);
