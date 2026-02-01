@@ -1,11 +1,15 @@
-import { cards } from "@repo/db/schema";
+import { cards, columns } from "@repo/db/schema";
 import { createServerFn } from "@tanstack/react-start";
 import { and, eq, sql } from "drizzle-orm";
 import { getDb } from "~/lib/db";
+import { invalidateBoardCache } from "./cache";
 
 // List cards with optional filters
 export const getCards = createServerFn({ method: "GET" })
-  .inputValidator((data: { columnId?: string; priority?: "low" | "medium" | "high" } | undefined) => data)
+  .inputValidator(
+    (data: { columnId?: string; priority?: "low" | "medium" | "high" } | undefined) =>
+      data,
+  )
   .handler(async ({ data }) => {
     const db = getDb();
     const conditions = [];
@@ -22,17 +26,22 @@ export const getCards = createServerFn({ method: "GET" })
 
 // Create card
 export const createCard = createServerFn({ method: "POST" })
-  .inputValidator((data: {
-    title: string;
-    description?: string;
-    columnId: string;
-    priority?: "low" | "medium" | "high";
-    tags?: string[];
-  }) => data)
+  .inputValidator(
+    (data: {
+      title: string;
+      description?: string;
+      columnId: string;
+      priority?: "low" | "medium" | "high";
+      tags?: string[];
+    }) => data,
+  )
   .handler(async ({ data }) => {
     const db = getDb();
     const id = crypto.randomUUID();
     const now = new Date();
+
+    // Get column to find boardId for cache invalidation
+    const [column] = await db.select().from(columns).where(eq(columns.id, data.columnId));
 
     // Get max position in column
     const [maxPos] = await db
@@ -52,6 +61,11 @@ export const createCard = createServerFn({ method: "POST" })
       updatedAt: now,
     });
 
+    // Invalidate cache
+    if (column) {
+      await invalidateBoardCache(column.boardId);
+    }
+
     return { id };
   });
 
@@ -65,6 +79,9 @@ export const moveCard = createServerFn({ method: "POST" })
     // Get current card
     const [current] = await db.select().from(cards).where(eq(cards.id, cardId));
     if (!current) throw new Error("Card not found");
+
+    // Get column to find boardId for cache invalidation
+    const [column] = await db.select().from(columns).where(eq(columns.id, columnId));
 
     // Reorder within same column or across columns
     await db.transaction(async (tx) => {
@@ -99,7 +116,10 @@ export const moveCard = createServerFn({ method: "POST" })
           .update(cards)
           .set({ position: sql`position - 1` })
           .where(
-            and(eq(cards.columnId, current.columnId), sql`position > ${current.position}`),
+            and(
+              eq(cards.columnId, current.columnId),
+              sql`position > ${current.position}`,
+            ),
           );
 
         await tx
@@ -115,21 +135,31 @@ export const moveCard = createServerFn({ method: "POST" })
         .where(eq(cards.id, cardId));
     });
 
+    // Invalidate cache
+    if (column) {
+      await invalidateBoardCache(column.boardId);
+    }
+
     return { success: true };
   });
 
 // Update card
 export const updateCard = createServerFn({ method: "POST" })
-  .inputValidator((data: {
-    id: string;
-    title?: string;
-    description?: string;
-    priority?: "low" | "medium" | "high" | null;
-    tags?: string[];
-  }) => data)
+  .inputValidator(
+    (data: {
+      id: string;
+      title?: string;
+      description?: string;
+      priority?: "low" | "medium" | "high" | null;
+      tags?: string[];
+    }) => data,
+  )
   .handler(async ({ data }) => {
     const db = getDb();
     const { id, tags, ...updates } = data;
+
+    // Get card to find column and boardId for cache invalidation
+    const [card] = await db.select().from(cards).where(eq(cards.id, id));
 
     await db
       .update(cards)
@@ -140,6 +170,17 @@ export const updateCard = createServerFn({ method: "POST" })
       })
       .where(eq(cards.id, id));
 
+    // Invalidate cache
+    if (card) {
+      const [column] = await db
+        .select()
+        .from(columns)
+        .where(eq(columns.id, card.columnId));
+      if (column) {
+        await invalidateBoardCache(column.boardId);
+      }
+    }
+
     return { success: true };
   });
 
@@ -148,6 +189,22 @@ export const deleteCard = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string }) => data)
   .handler(async ({ data }) => {
     const db = getDb();
+
+    // Get card to find column and boardId for cache invalidation
+    const [card] = await db.select().from(cards).where(eq(cards.id, data.id));
+
     await db.delete(cards).where(eq(cards.id, data.id));
+
+    // Invalidate cache
+    if (card) {
+      const [column] = await db
+        .select()
+        .from(columns)
+        .where(eq(columns.id, card.columnId));
+      if (column) {
+        await invalidateBoardCache(column.boardId);
+      }
+    }
+
     return { success: true };
   });

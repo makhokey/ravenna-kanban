@@ -7,8 +7,6 @@ export const filterAtom = atom<{
 
 export const groupByAtom = atom<"column" | "priority" | "tag">("column");
 
-export const activeCardAtom = atom<string | null>(null);
-
 export const dialogAtom = atom<{
   open: boolean;
   mode: "create" | "edit";
@@ -18,5 +16,5 @@ export const dialogAtom = atom<{
 
 export const dragStateAtom = atom<{
   activeId: string | null;
-  type: "card" | "column" | null;
+  type: "card" | null;
 }>({ activeId: null, type: null });

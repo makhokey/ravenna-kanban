@@ -1,13 +1,11 @@
-import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { cn } from "@repo/ui/lib/utils";
-import { useSetAtom } from "jotai";
-import { GripVertical, MoreHorizontal, Plus, Trash2 } from "lucide-react";
+import { useAtomValue, useSetAtom } from "jotai";
+import { MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useDeleteCard } from "~/hooks/use-cards";
 import { useDeleteColumn, useUpdateColumn } from "~/hooks/use-columns";
 import { dialogAtom, filterAtom } from "~/stores/kanban";
-import { useAtomValue } from "jotai";
 import { Card } from "./card";
 
 interface CardData {
@@ -42,17 +40,6 @@ export function Column({ column }: ColumnProps) {
   const updateColumn = useUpdateColumn();
   const deleteColumn = useDeleteColumn();
   const deleteCard = useDeleteCard();
-
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({
-      id: column.id,
-      data: { type: "column", column },
-    });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
 
   // Filter cards based on current filter
   const filteredCards = column.cards.filter((card) => {
@@ -90,24 +77,12 @@ export function Column({ column }: ColumnProps) {
 
   return (
     <div
-      ref={setNodeRef}
-      style={style}
       className={cn(
         "bg-muted/50 flex h-fit w-72 flex-shrink-0 flex-col rounded-lg border",
-        isDragging && "opacity-50",
       )}
     >
       {/* Column Header */}
       <div className="flex items-center gap-2 p-3">
-        <button
-          type="button"
-          className="text-muted-foreground hover:text-foreground cursor-grab touch-none"
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical className="h-4 w-4" />
-        </button>
-
         {isEditing ? (
           <input
             type="text"
@@ -121,7 +96,7 @@ export function Column({ column }: ColumnProps) {
                 setIsEditing(false);
               }
             }}
-            className="bg-background flex-1 rounded border px-2 py-1 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="bg-background flex-1 rounded border px-2 py-1 text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none"
             autoFocus
           />
         ) : (
@@ -140,9 +115,10 @@ export function Column({ column }: ColumnProps) {
           <button
             type="button"
             onClick={() => setShowMenu(!showMenu)}
-            className="text-muted-foreground hover:text-foreground rounded p-1"
+            className="text-muted-foreground hover:text-foreground hover:bg-accent min-h-[44px] min-w-[44px] rounded p-2.5 sm:min-h-0 sm:min-w-0 sm:p-1"
+            aria-label="Column menu"
           >
-            <MoreHorizontal className="h-4 w-4" />
+            <MoreHorizontal className="h-5 w-5 sm:h-4 sm:w-4" />
           </button>
 
           {showMenu && (
@@ -174,12 +150,10 @@ export function Column({ column }: ColumnProps) {
         {/* Add Card Button */}
         <button
           type="button"
-          onClick={() =>
-            setDialog({ open: true, mode: "create", columnId: column.id })
-          }
-          className="text-muted-foreground hover:bg-accent hover:text-accent-foreground flex items-center gap-2 rounded-lg border border-dashed p-2 text-sm transition-colors"
+          onClick={() => setDialog({ open: true, mode: "create", columnId: column.id })}
+          className="text-muted-foreground hover:bg-accent hover:text-accent-foreground flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-dashed p-2 text-sm transition-colors"
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="h-5 w-5 sm:h-4 sm:w-4" />
           Add card
         </button>
       </div>

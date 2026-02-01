@@ -1,16 +1,22 @@
 {
-	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "ravenna-kanban",
-	"compatibility_date": "2025-01-01",
-	"compatibility_flags": ["nodejs_compat"],
-	"main": "@tanstack/react-start/server-entry",
-	"observability": { "enabled": true },
-	"d1_databases": [
-		{
-			"binding": "DB",
-			"database_name": "ravenna-kanban-db",
-			"database_id": "cf2f1a10-3ce7-40cf-b04f-89ac3f8b3f5e",
-			"migrations_dir": "../../packages/db/drizzle"
-		}
-	]
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ravenna-kanban",
+  "compatibility_date": "2025-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "@tanstack/react-start/server-entry",
+  "observability": { "enabled": true },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ravenna-kanban-db",
+      "database_id": "cf2f1a10-3ce7-40cf-b04f-89ac3f8b3f5e",
+      "migrations_dir": "../../packages/db/drizzle",
+    },
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "CACHE",
+      "id": "d115766b42774c6b94b41eef0ae7c140",
+    },
+  ],
 }

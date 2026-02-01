@@ -141,7 +141,7 @@ export function FilterBar() {
                 value={newColumnName}
                 onChange={(e) => setNewColumnName(e.target.value)}
                 placeholder="Column name"
-                className="border-input bg-background w-40 rounded-md border px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="border-input bg-background w-40 rounded-md border px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleAddColumn();

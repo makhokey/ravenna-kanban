@@ -19,9 +19,12 @@ export function CardDialog() {
   const [tagsInput, setTagsInput] = useState("");
 
   // Find existing card data if editing
-  const existingCard = dialog.mode === "edit" && dialog.cardId
-    ? board?.columns.flatMap((col) => col.cards).find((card) => card.id === dialog.cardId)
-    : null;
+  const existingCard =
+    dialog.mode === "edit" && dialog.cardId
+      ? board?.columns
+          .flatMap((col) => col.cards)
+          .find((card) => card.id === dialog.cardId)
+      : null;
 
   useEffect(() => {
     if (dialog.open) {
@@ -84,15 +87,15 @@ export function CardDialog() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="animate-in fade-in fixed inset-0 z-50 flex items-center justify-center duration-200">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/50"
+        className="animate-in fade-in absolute inset-0 bg-black/50 duration-200"
         onClick={handleClose}
       />
 
       {/* Dialog */}
-      <div className="bg-background relative z-10 w-full max-w-lg rounded-lg border p-6 shadow-lg">
+      <div className="bg-background animate-in fade-in zoom-in-95 slide-in-from-bottom-4 relative z-10 w-full max-w-lg rounded-lg border p-6 shadow-lg duration-300">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">
             {dialog.mode === "create" ? "Create Card" : "Edit Card"}
@@ -116,7 +119,7 @@ export function CardDialog() {
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="border-input bg-background focus:ring-ring w-full rounded-md border px-3 py-2 focus:outline-none focus:ring-2"
+              className="border-input bg-background focus:ring-ring w-full rounded-md border px-3 py-2 focus:ring-2 focus:outline-none"
               placeholder="Card title"
               required
               autoFocus
@@ -131,7 +134,7 @@ export function CardDialog() {
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="border-input bg-background focus:ring-ring w-full rounded-md border px-3 py-2 focus:outline-none focus:ring-2"
+              className="border-input bg-background focus:ring-ring w-full rounded-md border px-3 py-2 focus:ring-2 focus:outline-none"
               placeholder="Optional description"
               rows={3}
             />
@@ -145,7 +148,7 @@ export function CardDialog() {
               id="priority"
               value={priority}
               onChange={(e) => setPriority(e.target.value as typeof priority)}
-              className="border-input bg-background focus:ring-ring w-full rounded-md border px-3 py-2 focus:outline-none focus:ring-2"
+              className="border-input bg-background focus:ring-ring w-full rounded-md border px-3 py-2 focus:ring-2 focus:outline-none"
             >
               <option value="">None</option>
               <option value="low">Low</option>
@@ -163,7 +166,7 @@ export function CardDialog() {
               type="text"
               value={tagsInput}
               onChange={(e) => setTagsInput(e.target.value)}
-              className="border-input bg-background focus:ring-ring w-full rounded-md border px-3 py-2 focus:outline-none focus:ring-2"
+              className="border-input bg-background focus:ring-ring w-full rounded-md border px-3 py-2 focus:ring-2 focus:outline-none"
               placeholder="Comma-separated tags (e.g., bug, feature)"
             />
           </div>
@@ -172,10 +175,7 @@ export function CardDialog() {
             <Button type="button" variant="outline" onClick={handleClose}>
               Cancel
             </Button>
-            <Button
-              type="submit"
-              disabled={createCard.isPending || updateCard.isPending}
-            >
+            <Button type="submit" disabled={createCard.isPending || updateCard.isPending}>
               {createCard.isPending || updateCard.isPending
                 ? "Saving..."
                 : dialog.mode === "create"

@@ -37,7 +37,7 @@ export function Card({ card, onDelete }: CardProps) {
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
+    transition: transition ?? "transform 200ms ease",
   };
 
   const tags: string[] = card.tags ? JSON.parse(card.tags) : [];
@@ -47,22 +47,26 @@ export function Card({ card, onDelete }: CardProps) {
       ref={setNodeRef}
       style={style}
       className={cn(
-        "bg-card text-card-foreground group relative rounded-lg border p-3 shadow-sm transition-shadow hover:shadow-md",
-        isDragging && "opacity-50",
+        "bg-card text-card-foreground group relative rounded-lg border p-3 shadow-sm",
+        "transition-all duration-200 ease-out",
+        "hover:-translate-y-0.5 hover:shadow-md",
+        isDragging && "scale-105 rotate-2 opacity-50 shadow-lg",
       )}
     >
       <div className="flex items-start gap-2">
+        {/* Drag handle - visible on hover (desktop) or always (touch) */}
         <button
           type="button"
-          className="text-muted-foreground hover:text-foreground mt-0.5 cursor-grab touch-none opacity-0 transition-opacity group-hover:opacity-100"
+          className="text-muted-foreground hover:text-foreground mt-0.5 min-h-[44px] min-w-[44px] cursor-grab touch-none opacity-100 transition-opacity sm:min-h-0 sm:min-w-0 sm:opacity-0 sm:group-hover:opacity-100"
+          aria-label="Drag card"
           {...attributes}
           {...listeners}
         >
-          <GripVertical className="h-4 w-4" />
+          <GripVertical className="h-5 w-5 sm:h-4 sm:w-4" />
         </button>
 
         <div className="min-w-0 flex-1">
-          <h4 className="font-medium leading-tight">{card.title}</h4>
+          <h4 className="leading-tight font-medium">{card.title}</h4>
 
           {card.description && (
             <p className="text-muted-foreground mt-1 line-clamp-2 text-sm">
@@ -93,22 +97,30 @@ export function Card({ card, onDelete }: CardProps) {
           </div>
         </div>
 
-        <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+        {/* Actions - visible on hover (desktop) or always (touch) */}
+        <div className="flex gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
           <button
             type="button"
             onClick={() =>
-              setDialog({ open: true, mode: "edit", cardId: card.id, columnId: card.columnId })
+              setDialog({
+                open: true,
+                mode: "edit",
+                cardId: card.id,
+                columnId: card.columnId,
+              })
             }
-            className="text-muted-foreground hover:text-foreground rounded p-1 transition-colors"
+            className="text-muted-foreground hover:text-foreground hover:bg-accent min-h-[44px] min-w-[44px] rounded p-2.5 transition-colors sm:min-h-0 sm:min-w-0 sm:p-1"
+            aria-label="Edit card"
           >
-            <Pencil className="h-3.5 w-3.5" />
+            <Pencil className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
           </button>
           <button
             type="button"
             onClick={() => onDelete(card.id)}
-            className="text-muted-foreground hover:text-destructive rounded p-1 transition-colors"
+            className="text-muted-foreground hover:text-destructive hover:bg-accent min-h-[44px] min-w-[44px] rounded p-2.5 transition-colors sm:min-h-0 sm:min-w-0 sm:p-1"
+            aria-label="Delete card"
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <Trash2 className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
           </button>
         </div>
       </div>

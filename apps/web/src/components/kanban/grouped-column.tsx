@@ -58,9 +58,7 @@ export function GroupedColumn({ group }: GroupedColumnProps) {
         ))}
 
         {group.cards.length === 0 && (
-          <div className="text-muted-foreground py-4 text-center text-sm">
-            No cards
-          </div>
+          <div className="text-muted-foreground py-4 text-center text-sm">No cards</div>
         )}
       </div>
     </div>

@@ -2,6 +2,7 @@ import { boards, columns } from "@repo/db/schema";
 import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 import { getDb } from "~/lib/db";
+import { cacheKeys, getCached, invalidateBoardCache } from "./cache";
 
 // Get board with columns and cards
 export const getBoard = createServerFn({ method: "GET" })
@@ -28,22 +29,24 @@ export const getBoard = createServerFn({ method: "GET" })
 
 // Get first board (for default board navigation)
 export const getFirstBoard = createServerFn().handler(async () => {
-  const db = getDb();
+  return getCached(cacheKeys.boardList(), async () => {
+    const db = getDb();
 
-  const board = await db.query.boards.findFirst({
-    with: {
-      columns: {
-        orderBy: (cols, { asc }) => [asc(cols.position)],
-        with: {
-          cards: {
-            orderBy: (c, { asc }) => [asc(c.position)],
+    const board = await db.query.boards.findFirst({
+      with: {
+        columns: {
+          orderBy: (cols, { asc }) => [asc(cols.position)],
+          with: {
+            cards: {
+              orderBy: (c, { asc }) => [asc(c.position)],
+            },
           },
         },
       },
-    },
-  });
+    });
 
-  return board;
+    return board;
+  });
 });
 
 // Create default board (for initial setup)
@@ -89,7 +92,10 @@ export const createColumn = createServerFn({ method: "POST" })
       .from(columns)
       .where(eq(columns.boardId, data.boardId));
 
-    const maxPosition = existingColumns.reduce((max, col) => Math.max(max, col.position), -1);
+    const maxPosition = existingColumns.reduce(
+      (max, col) => Math.max(max, col.position),
+      -1,
+    );
 
     await db.insert(columns).values({
       id,
@@ -99,6 +105,9 @@ export const createColumn = createServerFn({ method: "POST" })
       createdAt: now,
       updatedAt: now,
     });
+
+    // Invalidate cache
+    await invalidateBoardCache(data.boardId);
 
     return { id };
   });
@@ -110,6 +119,9 @@ export const updateColumn = createServerFn({ method: "POST" })
     const db = getDb();
     const { id, ...updates } = data;
 
+    // Get column to find boardId for cache invalidation
+    const [column] = await db.select().from(columns).where(eq(columns.id, id));
+
     await db
       .update(columns)
       .set({
@@ -117,6 +129,11 @@ export const updateColumn = createServerFn({ method: "POST" })
         updatedAt: new Date(),
       })
       .where(eq(columns.id, id));
+
+    // Invalidate cache
+    if (column) {
+      await invalidateBoardCache(column.boardId);
+    }
 
     return { success: true };
   });
@@ -126,6 +143,17 @@ export const deleteColumn = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string }) => data)
   .handler(async ({ data }) => {
     const db = getDb();
+
+    // Get column to find boardId for cache invalidation
+    const [column] = await db.select().from(columns).where(eq(columns.id, data.id));
+
     await db.delete(columns).where(eq(columns.id, data.id));
+
+    // Invalidate cache
+    if (column) {
+      await invalidateBoardCache(column.boardId);
+    }
+
     return { success: true };
   });
+

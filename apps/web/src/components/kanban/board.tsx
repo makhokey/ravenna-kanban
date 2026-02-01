@@ -9,7 +9,6 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import { useAtom, useAtomValue } from "jotai";
 import { useMemo, useState } from "react";
 import { useBoard } from "~/hooks/use-board";
@@ -72,7 +71,9 @@ export function Board() {
       const priorities = ["high", "medium", "low", null];
       return priorities.map((priority) => ({
         id: `priority-${priority ?? "none"}`,
-        name: priority ? priority.charAt(0).toUpperCase() + priority.slice(1) : "No Priority",
+        name: priority
+          ? priority.charAt(0).toUpperCase() + priority.slice(1)
+          : "No Priority",
         cards: filteredCards
           .filter((card) => card.priority === priority)
           .sort((a, b) => a.position - b.position),
@@ -110,12 +111,12 @@ export function Board() {
   if (!board) {
     return (
       <div className="flex h-full items-center justify-center">
-        <p className="text-muted-foreground">No board found. Create one to get started.</p>
+        <p className="text-muted-foreground">
+          No board found. Create one to get started.
+        </p>
       </div>
     );
   }
-
-  const columnIds = board.columns.map((col) => col.id);
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
@@ -124,8 +125,6 @@ export function Board() {
     if (type === "card") {
       setActiveCard(active.data.current?.card);
       setDragState({ activeId: active.id as string, type: "card" });
-    } else if (type === "column") {
-      setDragState({ activeId: active.id as string, type: "column" });
     }
   };
 
@@ -177,7 +176,7 @@ export function Board() {
       if (overType === "column") {
         // Dropped on empty column
         targetColumnId = over.id as string;
-        const targetColumn = board.columns.find((col) => col.id === targetColumnId);
+        const targetColumn = board!.columns.find((col) => col.id === targetColumnId);
         targetPosition = targetColumn?.cards.length ?? 0;
       } else if (overType === "card") {
         // Dropped on another card
@@ -189,7 +188,10 @@ export function Board() {
       }
 
       // Only update if something changed
-      if (activeCard.columnId !== targetColumnId || activeCard.position !== targetPosition) {
+      if (
+        activeCard.columnId !== targetColumnId ||
+        activeCard.position !== targetPosition
+      ) {
         moveCard.mutate({
           cardId: activeCard.id,
           columnId: targetColumnId,
@@ -207,18 +209,10 @@ export function Board() {
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex h-full gap-4 overflow-x-auto p-4">
-        {groupBy === "column" ? (
-          <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
-            {board.columns.map((column) => (
-              <Column key={column.id} column={column} />
-            ))}
-          </SortableContext>
-        ) : (
-          groupedColumns?.map((group) => (
-            <GroupedColumn key={group.id} group={group} />
-          ))
-        )}
+      <div className="flex h-full gap-4 overflow-x-auto overscroll-x-contain p-4 [-webkit-overflow-scrolling:touch]">
+        {groupBy === "column"
+          ? board.columns.map((column) => <Column key={column.id} column={column} />)
+          : groupedColumns?.map((group) => <GroupedColumn key={group.id} group={group} />)}
       </div>
 
       <DragOverlay>
