@@ -8,12 +8,9 @@ import { getColumnStatus, safeParseJsonTags } from "~/components/shared/card-sch
 import { StatusIcon } from "~/components/shared/status-icon";
 import { useDeleteCard } from "~/hooks/use-cards";
 import { dialogAtom, priorityFiltersAtom, tagFiltersAtom } from "~/stores/board";
-import { activeIdAtom, insertIndexAtom, targetColumnIdAtom } from "~/stores/kanban-drag";
+import { activeIdAtom, targetColumnIdAtom } from "~/stores/kanban-drag";
 import type { CardData, ColumnData } from "~/types/board";
 import { Card } from "./card";
-
-// Match card h-32 (128px) + gap-2 (8px) = 136px = 8.5rem
-const CARD_SLIDE_OFFSET = "8.5rem";
 
 interface ColumnProps {
   column: ColumnData;
@@ -29,7 +26,6 @@ export function Column({ column, cardIds, cardsById }: ColumnProps) {
   // Use granular selectors for drag state to minimize re-renders
   const activeId = useAtomValue(activeIdAtom);
   const targetColumnId = useAtomValue(targetColumnIdAtom);
-  const insertIndex = useAtomValue(insertIndexAtom);
 
   // Get status icon for column header
   const columnStatus = useMemo(() => getColumnStatus(column.name), [column.name]);
@@ -62,7 +58,6 @@ export function Column({ column, cardIds, cardsById }: ColumnProps) {
 
   // Visual feedback state
   const isDropTarget = activeId !== null && targetColumnId === column.id;
-  const isDraggingFromThisColumn = filteredCardIds.includes(activeId ?? "");
 
   const deleteCard = useDeleteCard();
 
@@ -101,38 +96,11 @@ export function Column({ column, cardIds, cardsById }: ColumnProps) {
       {/* Cards */}
       <div className="group/column flex flex-1 flex-col gap-2 overflow-y-auto pt-0">
         <SortableContext items={filteredCardIds} strategy={verticalListSortingStrategy}>
-          {filteredCardIds.map((id, idx) => {
+          {filteredCardIds.map((id) => {
             const card = cardsById[id];
             if (!card) return null;
 
-            // Collapse card in source column when dragging to different column
-            const isDraggingToOtherColumn =
-              id === activeId && targetColumnId !== null && targetColumnId !== column.id;
-
-            // Calculate if this card should slide down to make room
-            // Only slide cards after insertion point when dragging from another column
-            const shouldSlide =
-              isDropTarget &&
-              !isDraggingFromThisColumn &&
-              insertIndex !== null &&
-              idx >= insertIndex;
-
-            return (
-              <div
-                key={id}
-                className={cn(
-                  "transition-all duration-150 ease-out",
-                  isDraggingToOtherColumn && "-my-1 h-0 opacity-0",
-                )}
-                style={{
-                  transform: shouldSlide
-                    ? `translateY(${CARD_SLIDE_OFFSET})`
-                    : "translateY(0)",
-                }}
-              >
-                <Card card={card} onDelete={handleDeleteCard} />
-              </div>
-            );
+            return <Card key={id} card={card} onDelete={handleDeleteCard} />;
           })}
         </SortableContext>
 

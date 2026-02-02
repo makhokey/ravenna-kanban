@@ -1,4 +1,9 @@
-import { useSortable } from "@dnd-kit/sortable";
+import {
+  defaultAnimateLayoutChanges,
+  useSortable,
+  type AnimateLayoutChanges,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   AlertDialog,
   AlertDialogClose,
@@ -32,6 +37,10 @@ interface CardProps {
   isDragOverlay?: boolean;
 }
 
+// Enable smooth animations when items are reordered, including after drag ends
+const animateLayoutChanges: AnimateLayoutChanges = (args) =>
+  defaultAnimateLayoutChanges({ ...args, wasDragging: true });
+
 function CardComponent({ card, onDelete, isDragOverlay }: CardProps) {
   const [panel, setPanel] = useAtom(panelAtom);
   const updateCard = useUpdateCard();
@@ -39,10 +48,12 @@ function CardComponent({ card, onDelete, isDragOverlay }: CardProps) {
 
   const isSelected = panel.open && panel.cardId === card.id;
 
-  const { attributes, listeners, setNodeRef, isDragging } = useSortable({
-    id: card.id,
-    data: { type: "card", card } satisfies CardDragData,
-  });
+  const { attributes, listeners, setNodeRef, isDragging, transform, transition } =
+    useSortable({
+      id: card.id,
+      data: { type: "card", card } satisfies CardDragData,
+      animateLayoutChanges,
+    });
 
   const tags = useMemo(() => safeParseJsonTags(card.tags), [card.tags]);
   const selectedTags = useMemo(() => getSelectedTags(tags), [tags]);
@@ -73,9 +84,13 @@ function CardComponent({ card, onDelete, isDragOverlay }: CardProps) {
       ref={setNodeRef}
       className={cn(
         "bg-card text-card-foreground group relative flex h-auto min-h-32 cursor-grab flex-col gap-2 overflow-hidden rounded-lg border p-3 select-none active:cursor-grabbing",
-        isDragging && !isDragOverlay && "opacity-0",
+        isDragging && !isDragOverlay && "opacity-50",
         isSelected && "border-primary",
       )}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+      }}
       {...attributes}
       {...listeners}
       onDoubleClick={() => {
@@ -105,45 +120,11 @@ function CardComponent({ card, onDelete, isDragOverlay }: CardProps) {
             onChange={handleStatusChange}
             iconOnly
           />
-          {/* <div className="opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
-            <Menu>
-            <MenuTrigger
-              render={
-                <Button variant="ghost" size="icon-xs" aria-label="Card actions">
-                  <MoreHorizontal className="size-4" />
-                </Button>
-              }
-            />
-            <MenuPopup align="start">
-              <MenuItem
-                onClick={() =>
-                  setDialog({
-                    open: true,
-                    mode: "edit",
-                    cardId: card.id,
-                    columnId: card.columnId,
-                  })
-                }
-              >
-                <Pencil />
-                Edit
-              </MenuItem>
-              {onDelete && (
-                <MenuItem variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
-                  <Trash2 />
-                  Delete
-                </MenuItem>
-              )}
-            </MenuPopup>
-          </Menu>
-          </div> */}
         </div>
       </div>
 
       {/* Body: Title */}
-      <h3 className="line-clamp-2 text-sm leading-tight font-semibold">
-        {card.title}
-      </h3>
+      <h3 className="line-clamp-2 text-sm leading-tight font-semibold">{card.title}</h3>
 
       {/* Tags row */}
       {selectedTags.length > 0 && (
