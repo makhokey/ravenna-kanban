@@ -16,7 +16,7 @@ import { useSetAtom } from "jotai";
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { memo, useMemo, useState } from "react";
 import { useUpdateCard } from "~/hooks/use-cards";
-import { dialogAtom } from "~/stores/board";
+import { panelAtom } from "~/stores/board";
 import type { CardData } from "~/types/board";
 import type { CardDragData } from "~/types/dnd";
 import {
@@ -36,7 +36,7 @@ interface CardProps {
 }
 
 function CardComponent({ card, onDelete, isDragOverlay }: CardProps) {
-  const setDialog = useSetAtom(dialogAtom);
+  const setPanel = useSetAtom(panelAtom);
   const updateCard = useUpdateCard();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
@@ -137,8 +137,21 @@ function CardComponent({ card, onDelete, isDragOverlay }: CardProps) {
         </div>
       </div>
 
-      {/* Body: Title */}
-      <h3 className="line-clamp-2 text-sm font-semibold leading-tight">{card.title}</h3>
+      {/* Body: Title - clickable to open panel */}
+      <h3
+        className="line-clamp-2 cursor-pointer text-sm font-semibold leading-tight hover:text-primary"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={() =>
+          setPanel({
+            open: true,
+            mode: "edit",
+            cardId: card.id,
+            columnId: card.columnId,
+          })
+        }
+      >
+        {card.title}
+      </h3>
 
       {/* Tags row */}
       {selectedTags.length > 0 && (

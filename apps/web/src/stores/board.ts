@@ -15,3 +15,11 @@ export const dialogAtom = atom<{
   cardId?: string;
   columnId?: string;
 }>({ open: false, mode: "create" });
+
+// Side panel state for card editing
+export const panelAtom = atom<{
+  open: boolean;
+  mode: "create" | "edit";
+  cardId?: string;
+  columnId?: string;
+}>({ open: false, mode: "create" });

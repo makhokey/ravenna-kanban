@@ -6,5 +6,9 @@ import { viewModeAtom } from "~/stores/board";
 export function BoardContainer() {
   const viewMode = useAtomValue(viewModeAtom);
 
-  return viewMode === "kanban" ? <KanbanBoard /> : <TableView />;
+  return (
+    <div className="flex-1 min-w-0 overflow-hidden">
+      {viewMode === "kanban" ? <KanbanBoard /> : <TableView />}
+    </div>
+  );
 }
