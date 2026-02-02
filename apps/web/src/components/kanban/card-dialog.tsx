@@ -1,186 +1,226 @@
 import { Button } from "@repo/ui/components/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogFooter,
+  DialogHeader,
+  DialogPanel,
+  DialogPopup,
+  DialogTitle,
+} from "@repo/ui/components/dialog";
+import { Field } from "@repo/ui/components/field";
+import { Form } from "@repo/ui/components/form";
+import { Input } from "@repo/ui/components/input";
+import { Kbd, KbdGroup } from "@repo/ui/components/kbd";
+import { Textarea } from "@repo/ui/components/textarea";
+import { toastManager } from "@repo/ui/components/toast";
+import { Tooltip, TooltipPopup, TooltipTrigger } from "@repo/ui/components/tooltip";
+import { useForm } from "@tanstack/react-form-start";
 import { useAtom } from "jotai";
-import { X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { LoaderIcon, XIcon } from "lucide-react";
+import { useCallback, useEffect, useRef } from "react";
 import { useBoard } from "~/hooks/use-board";
 import { useCreateCard, useUpdateCard } from "~/hooks/use-cards";
 import { dialogAtom } from "~/stores/kanban";
+import {
+  cardFormSchema,
+  safeParseJsonTags,
+  type CardFormOutput,
+  type CardFormValues,
+  type PriorityValue,
+} from "./card-schema";
+import { PrioritySelect } from "./priority-select";
+import { TagSelect } from "./tag-select";
 
 export function CardDialog() {
   const [dialog, setDialog] = useAtom(dialogAtom);
   const { data: board } = useBoard();
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   const createCard = useCreateCard();
   const updateCard = useUpdateCard();
 
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [priority, setPriority] = useState<"low" | "medium" | "high" | "">("");
-  const [tagsInput, setTagsInput] = useState("");
-
-  // Find existing card data if editing
   const existingCard =
     dialog.mode === "edit" && dialog.cardId ? board?.cardsById[dialog.cardId] : null;
 
-  useEffect(() => {
-    if (dialog.open) {
-      if (existingCard) {
-        setTitle(existingCard.title);
-        setDescription(existingCard.description ?? "");
-        setPriority((existingCard.priority as "low" | "medium" | "high") ?? "");
-        const tags: string[] = existingCard.tags ? JSON.parse(existingCard.tags) : [];
-        setTagsInput(tags.join(", "));
-      } else {
-        setTitle("");
-        setDescription("");
-        setPriority("");
-        setTagsInput("");
-      }
+  const getDefaultValues = useCallback((): CardFormValues => {
+    if (existingCard) {
+      const tags = safeParseJsonTags(existingCard.tags);
+      return {
+        title: existingCard.title,
+        description: existingCard.description ?? "",
+        priority: (existingCard.priority as PriorityValue) ?? "no priority",
+        tags,
+      };
     }
-  }, [dialog.open, existingCard]);
+    return { title: "", description: "", priority: "no priority", tags: [] };
+  }, [existingCard]);
 
-  if (!dialog.open) return null;
+  const closeDialog = () => setDialog({ open: false, mode: "create" });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const tags = tagsInput
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean);
-
+  const handleFormSubmit = (data: CardFormOutput) => {
     if (dialog.mode === "create" && dialog.columnId) {
       createCard.mutate(
         {
-          title,
-          description: description || undefined,
+          title: data.title,
+          description: data.description,
           columnId: dialog.columnId,
-          priority: priority || undefined,
-          tags: tags.length > 0 ? tags : undefined,
+          priority: data.priority,
+          tags: data.tags,
         },
-        {
-          onSuccess: () => setDialog({ open: false, mode: "create" }),
-        },
+        { onSuccess: closeDialog },
       );
     } else if (dialog.mode === "edit" && dialog.cardId) {
       updateCard.mutate(
         {
           id: dialog.cardId,
-          title,
-          description: description || undefined,
-          priority: priority || null,
-          tags: tags.length > 0 ? tags : undefined,
+          title: data.title,
+          description: data.description,
+          priority: data.priority,
+          tags: data.tags,
         },
-        {
-          onSuccess: () => setDialog({ open: false, mode: "create" }),
-        },
+        { onSuccess: closeDialog },
       );
     }
   };
 
-  const handleClose = () => {
-    setDialog({ open: false, mode: "create" });
-  };
+  const form = useForm({
+    defaultValues: getDefaultValues(),
+    onSubmit: async ({ value }) => {
+      const result = cardFormSchema.safeParse(value);
+      if (!result.success) {
+        toastManager.add({ title: "Title is required", type: "error" });
+        return;
+      }
+      handleFormSubmit(result.data);
+    },
+  });
+
+  useEffect(() => {
+    if (dialog.open) {
+      form.reset(getDefaultValues());
+    }
+  }, [dialog.open, existingCard, form, getDefaultValues]);
+
+  const isPending = createCard.isPending || updateCard.isPending;
+
+  // Scoped ⌘+Enter keyboard shortcut to submit (within dialog only)
+  useEffect(() => {
+    if (!dialog.open) return;
+
+    const dialogEl = dialogRef.current;
+    if (!dialogEl) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        e.preventDefault();
+        form.handleSubmit();
+      }
+    };
+
+    dialogEl.addEventListener("keydown", handleKeyDown);
+    return () => dialogEl.removeEventListener("keydown", handleKeyDown);
+  }, [dialog.open, form]);
 
   return (
-    <div className="animate-in fade-in fixed inset-0 z-50 flex items-center justify-center duration-200">
-      {/* Backdrop */}
-      <div
-        className="animate-in fade-in absolute inset-0 bg-black/50 duration-200"
-        onClick={handleClose}
-      />
+    <Dialog open={dialog.open} onOpenChange={(open) => !open && closeDialog()}>
+      <DialogPopup ref={dialogRef} showCloseButton={false}>
+        <DialogHeader className="flex flex-row items-center justify-between px-4 py-4">
+          <DialogTitle className="text-sm font-medium">
+            {dialog.mode === "create" ? "New Card" : "Edit Card"}
+          </DialogTitle>
+          <DialogClose render={<Button variant="ghost" size="icon" />}>
+            <XIcon className="size-4" />
+          </DialogClose>
+        </DialogHeader>
 
-      {/* Dialog */}
-      <div className="bg-background animate-in fade-in zoom-in-95 slide-in-from-bottom-4 relative z-10 w-full max-w-lg rounded-lg border p-6 shadow-lg duration-300">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">
-            {dialog.mode === "create" ? "Create Card" : "Edit Card"}
-          </h2>
-          <button
-            type="button"
-            onClick={handleClose}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+        <Form className="contents">
+          <DialogPanel className="p-4">
+            <form.Field name="title">
+              {(field) => (
+                <Field>
+                  <Input
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="Issue title"
+                    className="border-0 px-0 text-lg font-medium shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                    autoFocus
+                  />
+                </Field>
+              )}
+            </form.Field>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="title" className="mb-1 block text-sm font-medium">
-              Title
-            </label>
-            <input
-              id="title"
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="border-input bg-background focus:ring-ring w-full rounded-md border px-3 py-2 focus:ring-2 focus:outline-none"
-              placeholder="Card title"
-              required
-              autoFocus
-            />
-          </div>
+            <form.Field name="description">
+              {(field) => (
+                <Field>
+                  <Textarea
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="Description..."
+                    unstyled
+                    className="max-h-40 w-full overflow-y-auto [&_textarea]:resize-none [&_textarea]:px-0"
+                  />
+                </Field>
+              )}
+            </form.Field>
 
-          <div>
-            <label htmlFor="description" className="mb-1 block text-sm font-medium">
-              Description
-            </label>
-            <textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="border-input bg-background focus:ring-ring w-full rounded-md border px-3 py-2 focus:ring-2 focus:outline-none"
-              placeholder="Optional description"
-              rows={3}
-            />
-          </div>
+            <div className="mt-2 flex items-center gap-1">
+              <form.Field name="priority">
+                {(field) => (
+                  <PrioritySelect
+                    value={(field.state.value ?? "no priority") as PriorityValue}
+                    onChange={(val) => field.handleChange(val)}
+                  />
+                )}
+              </form.Field>
 
-          <div>
-            <label htmlFor="priority" className="mb-1 block text-sm font-medium">
-              Priority
-            </label>
-            <select
-              id="priority"
-              value={priority}
-              onChange={(e) => setPriority(e.target.value as typeof priority)}
-              className="border-input bg-background focus:ring-ring w-full rounded-md border px-3 py-2 focus:ring-2 focus:outline-none"
-            >
-              <option value="">None</option>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-            </select>
-          </div>
+              <form.Field name="tags">
+                {(field) => (
+                  <TagSelect
+                    value={field.state.value ?? []}
+                    onChange={(val) => field.handleChange(val)}
+                  />
+                )}
+              </form.Field>
+            </div>
+          </DialogPanel>
 
-          <div>
-            <label htmlFor="tags" className="mb-1 block text-sm font-medium">
-              Tags
-            </label>
-            <input
-              id="tags"
-              type="text"
-              value={tagsInput}
-              onChange={(e) => setTagsInput(e.target.value)}
-              className="border-input bg-background focus:ring-ring w-full rounded-md border px-3 py-2 focus:ring-2 focus:outline-none"
-              placeholder="Comma-separated tags (e.g., bug, feature)"
-            />
-          </div>
-
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={handleClose}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={createCard.isPending || updateCard.isPending}>
-              {createCard.isPending || updateCard.isPending
-                ? "Saving..."
-                : dialog.mode === "create"
-                  ? "Create"
-                  : "Save"}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+          <DialogFooter className="px-4 py-2">
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={isPending}
+                    onClick={() => form.handleSubmit()}
+                  >
+                    {isPending ? (
+                      <>
+                        <LoaderIcon className="size-4 animate-spin" />
+                        {dialog.mode === "create" ? "Creating" : "Saving"}
+                      </>
+                    ) : dialog.mode === "create" ? (
+                      "Create"
+                    ) : (
+                      "Save"
+                    )}
+                  </Button>
+                }
+              />
+              <TooltipPopup>
+                {dialog.mode === "create" ? "Create" : "Save"}
+                <KbdGroup>
+                  <Kbd>⌘</Kbd>
+                  <Kbd>↵</Kbd>
+                </KbdGroup>
+              </TooltipPopup>
+            </Tooltip>
+          </DialogFooter>
+        </Form>
+      </DialogPopup>
+    </Dialog>
   );
 }

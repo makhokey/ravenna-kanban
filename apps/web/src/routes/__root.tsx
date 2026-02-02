@@ -7,10 +7,10 @@ import {
   ScriptOnce,
   Scripts,
 } from "@tanstack/react-router";
-
 import appCss from "~/styles.css?url";
 
-import { Toaster } from "@repo/ui/components/sonner";
+import { ToastProvider } from "@repo/ui/components/toast";
+import { TooltipProvider } from "@repo/ui/components/tooltip";
 import { ThemeProvider } from "@repo/ui/lib/theme-provider";
 
 export const Route = createRootRouteWithContext<{
@@ -63,8 +63,9 @@ function RootDocument({ children }: { readonly children: React.ReactNode }) {
         </ScriptOnce>
 
         <ThemeProvider>
-          {children}
-          <Toaster richColors />
+          <ToastProvider position="bottom-right">
+            <TooltipProvider>{children}</TooltipProvider>
+          </ToastProvider>
         </ThemeProvider>
 
         <Scripts />

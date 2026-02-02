@@ -1,7 +1,7 @@
+import { boards, cards, columns } from "@repo/db/schema";
 import type { Board, Card, Column } from "@repo/db/types";
-import { boards, columns } from "@repo/db/schema";
 import { createServerFn } from "@tanstack/react-start";
-import { eq } from "drizzle-orm";
+import { eq, isNull } from "drizzle-orm";
 import { getDb } from "~/lib/db";
 import { cacheKeys, getCached, invalidateBoardCache } from "./cache";
 
@@ -55,6 +55,7 @@ export const getBoard = createServerFn({ method: "GET" })
           orderBy: (cols, { asc }) => [asc(cols.position)],
           with: {
             cards: {
+              where: isNull(cards.deletedAt),
               orderBy: (c, { asc }) => [asc(c.position)],
             },
           },
@@ -76,6 +77,7 @@ export const getFirstBoard = createServerFn().handler(async () => {
           orderBy: (cols, { asc }) => [asc(cols.position)],
           with: {
             cards: {
+              where: isNull(cards.deletedAt),
               orderBy: (c, { asc }) => [asc(c.position)],
             },
           },

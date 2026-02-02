@@ -1,7 +1,11 @@
 import { cards, columns } from "@repo/db/schema";
 import { createServerFn } from "@tanstack/react-start";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { generateKeyBetween } from "fractional-indexing";
+import {
+  createCardServerSchema,
+  updateCardServerSchema,
+} from "~/components/kanban/card-schema";
 import { getDb } from "~/lib/db";
 import { invalidateBoardCache } from "./cache";
 
@@ -13,7 +17,8 @@ export const getCards = createServerFn({ method: "GET" })
   )
   .handler(async ({ data }) => {
     const db = getDb();
-    const conditions = [];
+    // Always filter out soft-deleted cards
+    const conditions = [isNull(cards.deletedAt)];
 
     if (data?.columnId) conditions.push(eq(cards.columnId, data.columnId));
     if (data?.priority) conditions.push(eq(cards.priority, data.priority));
@@ -21,21 +26,19 @@ export const getCards = createServerFn({ method: "GET" })
     return db
       .select()
       .from(cards)
-      .where(conditions.length ? and(...conditions) : undefined)
+      .where(and(...conditions))
       .orderBy(cards.position);
   });
 
 // Create card
 export const createCard = createServerFn({ method: "POST" })
-  .inputValidator(
-    (data: {
-      title: string;
-      description?: string;
-      columnId: string;
-      priority?: "low" | "medium" | "high";
-      tags?: string[];
-    }) => data,
-  )
+  .inputValidator((data: unknown) => {
+    const result = createCardServerSchema.safeParse(data);
+    if (!result.success) {
+      throw new Error(result.error.issues[0]?.message ?? "Invalid input");
+    }
+    return result.data;
+  })
   .handler(async ({ data }) => {
     const db = getDb();
     const id = crypto.randomUUID();
@@ -63,7 +66,7 @@ export const createCard = createServerFn({ method: "POST" })
       description: data.description ?? null,
       columnId: data.columnId,
       priority: data.priority ?? null,
-      tags: data.tags ? JSON.stringify(data.tags) : null,
+      tags: data.tags && data.tags.length > 0 ? JSON.stringify(data.tags) : null,
       position,
       createdAt: now,
       updatedAt: now,
@@ -107,30 +110,37 @@ export const moveCard = createServerFn({ method: "POST" })
 
 // Update card
 export const updateCard = createServerFn({ method: "POST" })
-  .inputValidator(
-    (data: {
-      id: string;
-      title?: string;
-      description?: string;
-      priority?: "low" | "medium" | "high" | null;
-      tags?: string[];
-    }) => data,
-  )
+  .inputValidator((data: unknown) => {
+    const result = updateCardServerSchema.safeParse(data);
+    if (!result.success) {
+      throw new Error(result.error.issues[0]?.message ?? "Invalid input");
+    }
+    return result.data;
+  })
   .handler(async ({ data }) => {
     const db = getDb();
-    const { id, tags, ...updates } = data;
+    const { id, tags, priority, ...updates } = data;
 
     // Get card to find column and boardId for cache invalidation
     const [card] = await db.select().from(cards).where(eq(cards.id, id));
 
-    await db
-      .update(cards)
-      .set({
-        ...updates,
-        tags: tags ? JSON.stringify(tags) : undefined,
-        updatedAt: new Date(),
-      })
-      .where(eq(cards.id, id));
+    // Build the update object, handling null for clearing vs undefined for unchanged
+    const updateValues: Record<string, unknown> = {
+      ...updates,
+      updatedAt: new Date(),
+    };
+
+    // Handle priority: null = clear, undefined = unchanged
+    if (priority !== undefined) {
+      updateValues.priority = priority;
+    }
+
+    // Handle tags: null = clear, undefined = unchanged
+    if (tags !== undefined) {
+      updateValues.tags = tags && tags.length > 0 ? JSON.stringify(tags) : null;
+    }
+
+    await db.update(cards).set(updateValues).where(eq(cards.id, id));
 
     // Invalidate cache
     if (card) {
@@ -146,7 +156,7 @@ export const updateCard = createServerFn({ method: "POST" })
     return { success: true };
   });
 
-// Delete card
+// Delete card (soft delete)
 export const deleteCard = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string }) => data)
   .handler(async ({ data }) => {
@@ -155,7 +165,11 @@ export const deleteCard = createServerFn({ method: "POST" })
     // Get card to find column and boardId for cache invalidation
     const [card] = await db.select().from(cards).where(eq(cards.id, data.id));
 
-    await db.delete(cards).where(eq(cards.id, data.id));
+    // Soft delete: set deletedAt timestamp instead of removing
+    await db
+      .update(cards)
+      .set({ deletedAt: new Date() })
+      .where(eq(cards.id, data.id));
 
     // Invalidate cache
     if (card) {

@@ -16,7 +16,7 @@
     "./components/*": "./components/*.tsx"
   },
   "dependencies": {
-    "@base-ui/react": "catalog:",
+    "@base-ui/react": "^1.1.0",
     "@tanstack/react-form-start": "catalog:",
     "class-variance-authority": "catalog:",
     "clsx": "catalog:",

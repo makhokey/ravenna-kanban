@@ -10,16 +10,20 @@ type CreateCardInput = {
   title: string;
   description?: string;
   columnId: string;
-  priority?: "low" | "medium" | "high";
-  tags?: string[];
+  // null = no priority, undefined = not provided
+  priority?: "low" | "medium" | "high" | null;
+  // null = no tags, undefined = not provided
+  tags?: string[] | null;
 };
 
 type UpdateCardInput = {
   id: string;
   title?: string;
   description?: string;
+  // null = clear priority, undefined = unchanged
   priority?: "low" | "medium" | "high" | null;
-  tags?: string[];
+  // null = clear tags, undefined = unchanged
+  tags?: string[] | null;
 };
 
 type MoveCardInput = {
@@ -39,7 +43,7 @@ function moveCardInBoard(
   targetColumnId: string,
   newPosition: string,
 ): BoardData {
-  const card = board.cardsById[cardId]; 
+  const card = board.cardsById[cardId];
   if (!card) return board;
 
   const sourceColumnId = card.columnId;
@@ -108,11 +112,14 @@ export function useCreateCard() {
           title: input.title,
           description: input.description ?? null,
           columnId: input.columnId,
+          // null or undefined both mean no priority
           priority: input.priority ?? null,
-          tags: input.tags ? JSON.stringify(input.tags) : null,
+          // null or undefined both mean no tags, empty array also means no tags
+          tags: input.tags && input.tags.length > 0 ? JSON.stringify(input.tags) : null,
           position: newPosition,
           createdAt: new Date(),
           updatedAt: new Date(),
+          deletedAt: null,
         };
 
         return {
@@ -152,7 +159,7 @@ export function useUpdateCard() {
 
       const previous = queryClient.getQueryData<BoardData>(queryKey);
 
-      // Optimistically update the card 
+      // Optimistically update the card
       queryClient.setQueryData<BoardData>(queryKey, (old) => {
         if (!old) return old;
 
@@ -164,8 +171,15 @@ export function useUpdateCard() {
           title: input.title ?? card.title,
           description:
             input.description !== undefined ? input.description : card.description,
+          // null = clear, undefined = unchanged
           priority: input.priority !== undefined ? input.priority : card.priority,
-          tags: input.tags !== undefined ? JSON.stringify(input.tags) : card.tags,
+          // null = clear, undefined = unchanged
+          tags:
+            input.tags !== undefined
+              ? input.tags && input.tags.length > 0
+                ? JSON.stringify(input.tags)
+                : null
+              : card.tags,
           updatedAt: new Date(),
         };
 

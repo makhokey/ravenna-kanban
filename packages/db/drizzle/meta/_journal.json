@@ -15,6 +15,13 @@
       "when": 1769951074328,
       "tag": "0001_romantic_human_torch",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1770030633898,
+      "tag": "0002_wet_cloak",
+      "breakpoints": true
     }
   ]
 }

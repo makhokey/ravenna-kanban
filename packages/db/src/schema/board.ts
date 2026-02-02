@@ -31,6 +31,7 @@ export const cards = sqliteTable("cards", {
     .references(() => columns.id, { onDelete: "cascade" }),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+  deletedAt: integer("deleted_at", { mode: "timestamp" }), // null = not deleted (soft delete)
 });
 
 // Relations
