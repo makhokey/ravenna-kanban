@@ -18,7 +18,7 @@ import { useSetAtom } from "jotai";
 import { useState } from "react";
 import { useBoard } from "~/hooks/use-board";
 import { useMoveCard } from "~/hooks/use-cards";
-import { dragStateAtom, INITIAL_DRAG_STATE } from "~/stores/kanban";
+import { dragStateAtom, INITIAL_DRAG_STATE } from "~/stores/kanban-drag";
 import type { CardData } from "~/types/board";
 import { isCardDragData } from "~/types/dnd";
 import { Card } from "./card";
@@ -189,7 +189,7 @@ export function Board() {
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="flex h-full gap-4 overflow-x-auto overscroll-x-contain p-4 [-webkit-overflow-scrolling:touch]">
+      <div className="flex h-full gap-3 overflow-x-auto overscroll-x-contain p-4 [-webkit-overflow-scrolling:touch]">
         {board.columnIds.map((id) => (
           <Column
             key={id}

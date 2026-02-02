@@ -21,7 +21,7 @@ import { LoaderIcon, XIcon } from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
 import { useBoard } from "~/hooks/use-board";
 import { useCreateCard, useUpdateCard } from "~/hooks/use-cards";
-import { dialogAtom } from "~/stores/kanban";
+import { dialogAtom } from "~/stores/board";
 import {
   cardFormSchema,
   safeParseJsonTags,

@@ -9,8 +9,8 @@ function BoardLayout() {
   return (
     <div className="flex h-svh flex-col">
       {/* Header */}
-      <header className="flex items-center justify-between border-b px-4 py-3">
-        <h1 className="text-xl font-bold">Ravenna Kanban</h1>
+      <header className="flex items-center justify-between border-b px-4 py-2">
+        <h1 className="text-base font-medium">Ravenna Kanban</h1>
         <ThemeToggle />
       </header>
 

@@ -1,14 +1,24 @@
 import { useSortable } from "@dnd-kit/sortable";
+import {
+  AlertDialog,
+  AlertDialogClose,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogPopup,
+  AlertDialogTitle,
+} from "@repo/ui/components/alert-dialog";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
+import { Menu, MenuItem, MenuPopup, MenuTrigger } from "@repo/ui/components/menu";
 import { cn } from "@repo/ui/lib/utils";
 import { useSetAtom } from "jotai";
-import { Pencil, Trash2 } from "lucide-react";
-import { memo, useMemo } from "react";
-import { dialogAtom } from "~/stores/kanban";
+import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { memo, useMemo, useState } from "react";
+import { dialogAtom } from "~/stores/board";
 import type { CardData } from "~/types/board";
 import type { CardDragData } from "~/types/dnd";
-import { TAG_OPTIONS } from "./card-schema";
+import { getPriorityOption, TAG_OPTIONS } from "~/components/shared/card-schema";
 
 interface CardProps {
   card: CardData;
@@ -16,17 +26,12 @@ interface CardProps {
   isDragOverlay?: boolean;
 }
 
-const priorityColors = {
-  low: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  medium: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-  high: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-} as const;
-
 const getTagColor = (tagValue: string) =>
   TAG_OPTIONS.find((opt) => opt.value === tagValue)?.color ?? "bg-gray-500";
 
 function CardComponent({ card, onDelete, isDragOverlay }: CardProps) {
   const setDialog = useSetAtom(dialogAtom);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const { attributes, listeners, setNodeRef, isDragging } = useSortable({
     id: card.id,
@@ -50,7 +55,7 @@ function CardComponent({ card, onDelete, isDragOverlay }: CardProps) {
     >
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <h3 className="line-clamp-2 leading-tight font-medium">{card.title}</h3>
+          <h3 className="line-clamp-2 text-sm font-medium leading-tight">{card.title}</h3>
           {card.description && (
             <p className="text-muted-foreground mt-1 line-clamp-2 text-sm">
               {card.description}
@@ -58,16 +63,17 @@ function CardComponent({ card, onDelete, isDragOverlay }: CardProps) {
           )}
 
           <div className="mt-2 flex max-h-6 flex-wrap items-center gap-1.5 overflow-hidden">
-            {card.priority && (
-              <span
-                className={cn(
-                  "rounded-full px-2 py-0.5 text-xs font-medium",
-                  priorityColors[card.priority as keyof typeof priorityColors],
-                )}
-              >
-                {card.priority}
-              </span>
-            )}
+            {card.priority && (() => {
+              const priorityOption = getPriorityOption(card.priority);
+              const PriorityIcon = priorityOption.icon;
+              return (
+                <span
+                  className="flex items-center rounded border p-0.5"
+                >
+                  <PriorityIcon className="size-4" />
+                </span>
+              );
+            })()}
 
             {tags.map((tag) => {
               const color = getTagColor(tag);
@@ -81,31 +87,60 @@ function CardComponent({ card, onDelete, isDragOverlay }: CardProps) {
           </div>
         </div>
 
-        <div className="flex gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={() =>
-              setDialog({
-                open: true,
-                mode: "edit",
-                cardId: card.id,
-                columnId: card.columnId,
-              })
-            }
-            aria-label="Edit card"
-          >
-            <Pencil />
-          </Button>
+        <div className="opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+          <Menu>
+            <MenuTrigger
+              render={
+                <Button variant="ghost" size="icon-xs" aria-label="Card actions">
+                  <MoreHorizontal className="size-4" />
+                </Button>
+              }
+            />
+            <MenuPopup align="end">
+              <MenuItem
+                onClick={() =>
+                  setDialog({
+                    open: true,
+                    mode: "edit",
+                    cardId: card.id,
+                    columnId: card.columnId,
+                  })
+                }
+              >
+                <Pencil />
+                Edit
+              </MenuItem>
+              {onDelete && (
+                <MenuItem variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
+                  <Trash2 />
+                  Delete
+                </MenuItem>
+              )}
+            </MenuPopup>
+          </Menu>
+
+          {/* Delete confirmation dialog */}
           {onDelete && (
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              onClick={() => onDelete(card.id)}
-              aria-label="Delete card"
-            >
-              <Trash2 />
-            </Button>
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+              <AlertDialogPopup>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete card</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete "{card.title}"? This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogClose render={<Button variant="outline">Cancel</Button>} />
+                  <AlertDialogClose
+                    render={
+                      <Button variant="destructive" onClick={() => onDelete(card.id)}>
+                        Delete
+                      </Button>
+                    }
+                  />
+                </AlertDialogFooter>
+              </AlertDialogPopup>
+            </AlertDialog>
           )}
         </div>
       </div>

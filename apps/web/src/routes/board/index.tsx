@@ -1,8 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Suspense } from "react";
-import { Board } from "~/components/kanban/board";
-import { CardDialog } from "~/components/kanban/card-dialog";
-import { FilterBar } from "~/components/kanban/filter-bar";
+import { BoardContainer, FilterBar } from "~/components/board";
+import { CardDialog } from "~/components/shared";
 import { boardQueryOptions } from "~/hooks/use-board";
 
 export const Route = createFileRoute("/board/")({
@@ -39,7 +38,7 @@ function BoardPage() {
         }
       >
         <FilterBar />
-        <Board />
+        <BoardContainer />
       </Suspense>
       <CardDialog />
     </>

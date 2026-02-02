@@ -100,7 +100,7 @@ export type CardFormOutput = z.output<typeof cardFormSchema>;
 export const createCardServerSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
-  columnId: z.uuid({ message: "Invalid column ID" }),
+  columnId: z.string().min(1, "Column ID is required"),
   priority: z.enum(["low", "medium", "high"]).optional(),
   tags: z.array(z.string()).optional(),
 });

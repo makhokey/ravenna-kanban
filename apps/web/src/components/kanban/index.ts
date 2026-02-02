@@ -1,5 +1,3 @@
-export { Board } from "./board";
+export { Board as KanbanBoard } from "./kanban-board";
 export { Card } from "./card";
-export { CardDialog } from "./card-dialog";
 export { Column } from "./column";
-export { FilterBar } from "./filter-bar";

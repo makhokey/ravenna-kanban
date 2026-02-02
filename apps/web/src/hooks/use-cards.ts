@@ -1,6 +1,6 @@
+import { toastManager } from "@repo/ui/components/toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { generateKeyBetween } from "fractional-indexing";
-import { toast } from "sonner";
 import { comparePosition } from "~/lib/position";
 import { createCard, deleteCard, moveCard, updateCard } from "~/server/cards";
 import { boardKeys } from "./query-keys";
@@ -134,12 +134,15 @@ export function useCreateCard() {
 
       return { previous };
     },
+    onSuccess: () => {
+      toastManager.add({ type: "success", title: "Card created" });
+    },
     onError: (_err, _input, ctx) => {
       // Rollback on error
       if (ctx?.previous) {
         queryClient.setQueryData(queryKey, ctx.previous);
       }
-      toast.error("Failed to create card");
+      toastManager.add({ type: "error", title: "Failed to create card" });
     },
     onSettled: () => {
       // Always refetch after mutation settles
@@ -191,11 +194,14 @@ export function useUpdateCard() {
 
       return { previous };
     },
+    onSuccess: () => {
+      toastManager.add({ type: "success", title: "Card updated" });
+    },
     onError: (_err, _input, ctx) => {
       if (ctx?.previous) {
         queryClient.setQueryData(queryKey, ctx.previous);
       }
-      toast.error("Failed to update card");
+      toastManager.add({ type: "error", title: "Failed to update card" });
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey });
@@ -226,7 +232,7 @@ export function useMoveCard() {
       if (ctx?.previous) {
         queryClient.setQueryData(queryKey, ctx.previous);
       }
-      toast.error("Failed to move card");
+      toastManager.add({ type: "error", title: "Failed to move card" });
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey });
@@ -269,11 +275,14 @@ export function useDeleteCard() {
 
       return { previous };
     },
+    onSuccess: () => {
+      toastManager.add({ type: "success", title: "Card deleted" });
+    },
     onError: (_err, _input, ctx) => {
       if (ctx?.previous) {
         queryClient.setQueryData(queryKey, ctx.previous);
       }
-      toast.error("Failed to delete card");
+      toastManager.add({ type: "error", title: "Failed to delete card" });
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey });
