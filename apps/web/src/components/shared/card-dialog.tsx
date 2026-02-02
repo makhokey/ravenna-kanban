@@ -12,139 +12,29 @@ import { Form } from "@repo/ui/components/form";
 import { Input } from "@repo/ui/components/input";
 import { Kbd, KbdGroup } from "@repo/ui/components/kbd";
 import { Textarea } from "@repo/ui/components/textarea";
-import { toastManager } from "@repo/ui/components/toast";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "@repo/ui/components/tooltip";
-import { useForm } from "@tanstack/react-form-start";
 import { useAtom } from "jotai";
 import { LoaderIcon, XIcon } from "lucide-react";
-import { useCallback, useEffect, useRef } from "react";
-import { useBoard } from "~/hooks/use-board";
-import { useCreateCard, useUpdateCard } from "~/hooks/use-cards";
+import { useCardForm } from "~/hooks/use-card-form";
 import { dialogAtom } from "~/stores/board";
-import {
-  cardFormSchema,
-  getColumnStatus,
-  safeParseJsonTags,
-  type CardFormOutput,
-  type CardFormValues,
-  type PriorityValue,
-  type StatusValue,
-} from "./card-schema";
+import type { PriorityValue, StatusValue } from "./card-schema";
 import { PrioritySelect } from "./priority-select";
 import { StatusSelect } from "./status-select";
 import { TagSelect } from "./tag-select";
 
 export function CardDialog() {
   const [dialog, setDialog] = useAtom(dialogAtom);
-  const { data: board } = useBoard();
-  const dialogRef = useRef<HTMLDivElement>(null);
-
-  const createCard = useCreateCard();
-  const updateCard = useUpdateCard();
-
-  const existingCard =
-    dialog.mode === "edit" && dialog.cardId ? board?.cardsById[dialog.cardId] : null;
-
-  // Get column name for status auto-selection
-  const column = dialog.columnId ? board?.columnsById[dialog.columnId] : null;
-
-  const getDefaultValues = useCallback((): CardFormValues => {
-    if (existingCard) {
-      const tags = safeParseJsonTags(existingCard.tags);
-      return {
-        title: existingCard.title,
-        description: existingCard.description ?? "",
-        priority: (existingCard.priority as PriorityValue) ?? "no priority",
-        status: (existingCard.status as StatusValue) ?? "backlog",
-        tags,
-      };
-    }
-    // Auto-select status based on column name for new cards
-    const columnStatus = column ? getColumnStatus(column.name) : null;
-    return {
-      title: "",
-      description: "",
-      priority: "no priority",
-      status: columnStatus ?? "backlog",
-      tags: [],
-    };
-  }, [existingCard, column]);
 
   const closeDialog = () => setDialog({ open: false, mode: "create" });
 
-  const handleFormSubmit = (data: CardFormOutput) => {
-    if (dialog.mode === "create" && dialog.columnId) {
-      createCard.mutate(
-        {
-          title: data.title,
-          description: data.description,
-          columnId: dialog.columnId,
-          priority: data.priority,
-          status: data.status,
-          tags: data.tags,
-        },
-        { onSuccess: closeDialog },
-      );
-    } else if (dialog.mode === "edit" && dialog.cardId) {
-      updateCard.mutate(
-        {
-          id: dialog.cardId,
-          title: data.title,
-          description: data.description,
-          priority: data.priority,
-          status: data.status,
-          tags: data.tags,
-        },
-        {
-          onSuccess: () => {
-            toastManager.add({ type: "success", title: "Card updated" });
-            closeDialog();
-          },
-        },
-      );
-    }
-  };
-
-  const form = useForm({
-    defaultValues: getDefaultValues(),
-    onSubmit: async ({ value }) => {
-      const result = cardFormSchema.safeParse(value);
-      if (!result.success) {
-        toastManager.add({ title: "Title is required", type: "error" });
-        return;
-      }
-      handleFormSubmit(result.data);
-    },
+  const { form, isPending, containerRef, mode } = useCardForm({
+    editorState: dialog,
+    onClose: closeDialog,
   });
-
-  useEffect(() => {
-    if (dialog.open) {
-      form.reset(getDefaultValues());
-    }
-  }, [dialog.open, existingCard, form, getDefaultValues]);
-
-  const isPending = createCard.isPending || updateCard.isPending;
-
-  useEffect(() => {
-    if (!dialog.open) return;
-
-    const dialogEl = dialogRef.current;
-    if (!dialogEl) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-        e.preventDefault();
-        form.handleSubmit();
-      }
-    };
-
-    dialogEl.addEventListener("keydown", handleKeyDown);
-    return () => dialogEl.removeEventListener("keydown", handleKeyDown);
-  }, [dialog.open, form]);
 
   return (
     <Dialog open={dialog.open} onOpenChange={(open) => !open && closeDialog()}>
-      <DialogPopup ref={dialogRef} showCloseButton={false}>
+      <DialogPopup ref={containerRef} showCloseButton={false}>
         <Form className="contents">
           <DialogHeader className="flex flex-row items-center justify-between px-4 py-2 pb-0!">
             <div className="w-full flex-1">
@@ -228,9 +118,9 @@ export function CardDialog() {
                     {isPending ? (
                       <>
                         <LoaderIcon className="size-4 animate-spin" />
-                        {dialog.mode === "create" ? "Creating" : "Saving"}
+                        {mode === "create" ? "Creating" : "Saving"}
                       </>
-                    ) : dialog.mode === "create" ? (
+                    ) : mode === "create" ? (
                       "Create"
                     ) : (
                       "Save"
@@ -239,7 +129,7 @@ export function CardDialog() {
                 }
               />
               <TooltipPopup>
-                {dialog.mode === "create" ? "Create" : "Save"}
+                {mode === "create" ? "Create" : "Save"}
                 <KbdGroup>
                   <Kbd>⌘</Kbd>
                   <Kbd>↵</Kbd>

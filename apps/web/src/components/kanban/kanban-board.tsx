@@ -16,11 +16,11 @@ import {
 } from "@dnd-kit/core";
 import { restrictToWindowEdges } from "@dnd-kit/modifiers";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { generateKeyBetween } from "fractional-indexing";
 import { useSetAtom } from "jotai";
 import { useState } from "react";
 import { useBoard } from "~/hooks/use-board";
 import { useMoveCard } from "~/hooks/use-cards";
+import { calculateDropPosition, computeOptimisticCardOrder } from "~/lib/dnd-position";
 import { dragStateAtom, INITIAL_DRAG_STATE } from "~/stores/kanban-drag";
 import type { CardData } from "~/types/board";
 import { isCardDragData } from "~/types/dnd";
@@ -115,71 +115,31 @@ export function Board() {
     const activeCard = board.cardsById[activeId];
     if (!activeCard) return;
 
-    // Determine target column - either from over card or if over a column directly
+    // Determine target column
     const overCard = over.data.current?.card as CardData | undefined;
     const targetColumnId = getTargetColumnId(over);
     if (!targetColumnId) return;
 
-    const sourceColumnId = activeCard.columnId;
-    const targetCardIds = board.cardIdsByColumn[targetColumnId] ?? [];
-    const sourceCardIds = board.cardIdsByColumn[sourceColumnId] ?? [];
-
     // Calculate new position using fractional indexing
-    let newPosition: string;
-    let insertIndex: number;
-
-    if (overCard) {
-      // Dropped on a card - insert relative to it
-      const overIndex = targetCardIds.indexOf(overId);
-      const activeIndex = targetCardIds.indexOf(activeId);
-
-      // Determine if inserting before or after the over card
-      const insertAfter = activeIndex !== -1 && activeIndex < overIndex;
-
-      if (insertAfter) {
-        // Insert after over card
-        const afterId = targetCardIds[overIndex + 1];
-        const afterCard = afterId ? board.cardsById[afterId] : null;
-        newPosition = generateKeyBetween(overCard.position, afterCard?.position ?? null);
-        insertIndex = overIndex + 1;
-      } else {
-        // Insert before over card
-        const beforeId = targetCardIds[overIndex - 1];
-        const beforeCard = beforeId ? board.cardsById[beforeId] : null;
-        newPosition = generateKeyBetween(beforeCard?.position ?? null, overCard.position);
-        insertIndex = overIndex;
-      }
-    } else {
-      // Dropped on empty column - add at end
-      const lastId = targetCardIds[targetCardIds.length - 1];
-      const lastCard = lastId ? board.cardsById[lastId] : null;
-      newPosition = generateKeyBetween(lastCard?.position ?? null, null);
-      insertIndex = targetCardIds.length;
-    }
+    const { newPosition, insertIndex } = calculateDropPosition(
+      board,
+      activeId,
+      targetColumnId,
+      overId,
+      overCard,
+    );
 
     // Only mutate if something changed
     if (activeCard.columnId !== targetColumnId || activeCard.position !== newPosition) {
       // Compute optimistic card order immediately to prevent flicker
-      const newOrder: TempCardOrder = { ...board.cardIdsByColumn };
+      const newOrder = computeOptimisticCardOrder(
+        board,
+        activeId,
+        activeCard.columnId,
+        targetColumnId,
+        insertIndex,
+      );
 
-      if (sourceColumnId === targetColumnId) {
-        // Same column reorder
-        const currentIds = [...sourceCardIds];
-        const currentIndex = currentIds.indexOf(activeId);
-        currentIds.splice(currentIndex, 1);
-        // Adjust insert index if we removed from before
-        const adjustedIndex = currentIndex < insertIndex ? insertIndex - 1 : insertIndex;
-        currentIds.splice(adjustedIndex, 0, activeId);
-        newOrder[sourceColumnId] = currentIds;
-      } else {
-        // Cross-column move
-        newOrder[sourceColumnId] = sourceCardIds.filter((id) => id !== activeId);
-        const newTargetIds = [...targetCardIds];
-        newTargetIds.splice(insertIndex, 0, activeId);
-        newOrder[targetColumnId] = newTargetIds;
-      }
-
-      // Set temp order immediately - this prevents the flicker
       setTempCardOrder(newOrder);
 
       moveCard.mutate(

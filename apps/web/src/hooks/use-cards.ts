@@ -113,6 +113,7 @@ export function useCreateCard() {
 
         const newCard = {
           id: tempId,
+          displayId: null, // Will be set by server
           title: input.title,
           description: input.description ?? null,
           columnId: input.columnId,

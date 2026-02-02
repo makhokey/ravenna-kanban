@@ -21,6 +21,7 @@ export const columns = sqliteTable("columns", {
 
 export const cards = sqliteTable("cards", {
   id: text("id").primaryKey(),
+  displayId: text("display_id").unique(), // "RAV-1", "RAV-2" - human-readable ID
   title: text("title").notNull(),
   description: text("description"),
   position: text("position").notNull(),
@@ -33,6 +34,12 @@ export const cards = sqliteTable("cards", {
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
   deletedAt: integer("deleted_at", { mode: "timestamp" }), // null = not deleted (soft delete)
+});
+
+// Sequences table for generating sequential IDs
+export const sequences = sqliteTable("sequences", {
+  name: text("name").primaryKey(), // "card" - allows future sequences
+  nextId: integer("next_id").notNull().default(1),
 });
 
 // Relations

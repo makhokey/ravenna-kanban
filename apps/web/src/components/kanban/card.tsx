@@ -109,7 +109,7 @@ function CardComponent({ card, onDelete, isDragOverlay }: CardProps) {
       {/* Header: Card ID | Status */}
       <div className="flex items-center justify-between">
         <span className="text-muted-foreground text-xs font-medium">
-          {card.id.slice(0, 8).toUpperCase()}
+          {card.displayId ?? card.id.slice(0, 8).toUpperCase()}
         </span>
         <div
           className="flex items-center gap-1"
@@ -186,6 +186,7 @@ function CardComponent({ card, onDelete, isDragOverlay }: CardProps) {
 export const Card = memo(CardComponent, (prev, next) => {
   return (
     prev.card.id === next.card.id &&
+    prev.card.displayId === next.card.displayId &&
     prev.card.updatedAt === next.card.updatedAt &&
     prev.card.title === next.card.title &&
     prev.card.description === next.card.description &&

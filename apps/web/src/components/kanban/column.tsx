@@ -4,9 +4,10 @@ import { cn } from "@repo/ui/lib/utils";
 import { useAtomValue, useSetAtom } from "jotai";
 import { Plus } from "lucide-react";
 import { useCallback, useMemo } from "react";
-import { getColumnStatus, safeParseJsonTags } from "~/components/shared/card-schema";
+import { getColumnStatus } from "~/components/shared/card-schema";
 import { StatusIcon } from "~/components/shared/status-icon";
 import { useDeleteCard } from "~/hooks/use-cards";
+import { useFilteredCardIds } from "~/hooks/use-filtered-cards";
 import { dialogAtom, priorityFiltersAtom, tagFiltersAtom } from "~/stores/board";
 import { activeIdAtom, targetColumnIdAtom } from "~/stores/kanban-drag";
 import type { CardData, ColumnData } from "~/types/board";
@@ -31,30 +32,12 @@ export function Column({ column, cardIds, cardsById }: ColumnProps) {
   const columnStatus = useMemo(() => getColumnStatus(column.name), [column.name]);
 
   // Filter cards based on priority and tag filters
-  const filteredCardIds = useMemo(() => {
-    if (priorityFilters.size === 0 && tagFilters.size === 0) {
-      return cardIds;
-    }
-
-    return cardIds.filter((id) => {
-      const card = cardsById[id];
-      if (!card) return false;
-
-      // Priority filter
-      if (priorityFilters.size > 0) {
-        const cardPriority = card.priority ?? "no priority";
-        if (!priorityFilters.has(cardPriority)) return false;
-      }
-
-      // Tag filter (card must have at least one selected tag)
-      if (tagFilters.size > 0) {
-        const cardTags = safeParseJsonTags(card.tags);
-        if (!cardTags.some((tag) => tagFilters.has(tag))) return false;
-      }
-
-      return true;
-    });
-  }, [cardIds, cardsById, priorityFilters, tagFilters]);
+  const filteredCardIds = useFilteredCardIds(
+    cardIds,
+    cardsById,
+    priorityFilters,
+    tagFilters,
+  );
 
   // Visual feedback state
   const isDropTarget = activeId !== null && targetColumnId === column.id;

@@ -5,171 +5,51 @@ import { Input } from "@repo/ui/components/input";
 import { Kbd, KbdGroup } from "@repo/ui/components/kbd";
 import { Separator } from "@repo/ui/components/separator";
 import { Textarea } from "@repo/ui/components/textarea";
-import { toastManager } from "@repo/ui/components/toast";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "@repo/ui/components/tooltip";
-import { useForm } from "@tanstack/react-form-start";
 import { useAtom } from "jotai";
 import { LoaderIcon, XIcon } from "lucide-react";
-import { useCallback, useEffect, useRef } from "react";
-import { useBoard } from "~/hooks/use-board";
-import { useCreateCard, useUpdateCard } from "~/hooks/use-cards";
+import { useCardForm } from "~/hooks/use-card-form";
 import { panelAtom } from "~/stores/board";
-import {
-  cardFormSchema,
-  getColumnStatus,
-  safeParseJsonTags,
-  type CardFormOutput,
-  type CardFormValues,
-  type PriorityValue,
-  type StatusValue,
-} from "./card-schema";
+import type { PriorityValue, StatusValue } from "./card-schema";
 import { PrioritySelect } from "./priority-select";
 import { StatusSelect } from "./status-select";
 import { TagSelect } from "./tag-select";
 
 export function CardPanel() {
   const [panel, setPanel] = useAtom(panelAtom);
-  const { data: board } = useBoard();
-  const panelRef = useRef<HTMLDivElement>(null);
-
-  const createCard = useCreateCard();
-  const updateCard = useUpdateCard();
-
-  const existingCard =
-    panel.mode === "edit" && panel.cardId ? board?.cardsById[panel.cardId] : null;
-
-  // Get column name for status auto-selection
-  const column = panel.columnId ? board?.columnsById[panel.columnId] : null;
-
-  const getDefaultValues = useCallback((): CardFormValues => {
-    if (existingCard) {
-      const tags = safeParseJsonTags(existingCard.tags);
-      return {
-        title: existingCard.title,
-        description: existingCard.description ?? "",
-        priority: (existingCard.priority as PriorityValue) ?? "no priority",
-        status: (existingCard.status as StatusValue) ?? "backlog",
-        tags,
-      };
-    }
-    // Auto-select status based on column name for new cards
-    const columnStatus = column ? getColumnStatus(column.name) : null;
-    return {
-      title: "",
-      description: "",
-      priority: "no priority",
-      status: columnStatus ?? "backlog",
-      tags: [],
-    };
-  }, [existingCard, column]);
 
   const closePanel = () => setPanel({ open: false, mode: "create" });
 
-  // Auto-save handlers for edit mode
-  const handleStatusChange = (status: StatusValue) => {
-    if (panel.mode === "edit" && panel.cardId) {
-      updateCard.mutate({ id: panel.cardId, status });
-    }
-  };
-
-  const handlePriorityChange = (priority: PriorityValue) => {
-    if (panel.mode === "edit" && panel.cardId) {
-      updateCard.mutate({
-        id: panel.cardId,
-        priority: priority === "no priority" ? null : priority,
-      });
-    }
-  };
-
-  const handleTagsChange = (tags: string[]) => {
-    if (panel.mode === "edit" && panel.cardId) {
-      updateCard.mutate({
-        id: panel.cardId,
-        tags: tags.length > 0 ? tags : null,
-      });
-    }
-  };
-
-  const handleFormSubmit = (data: CardFormOutput) => {
-    if (panel.mode === "create" && panel.columnId) {
-      createCard.mutate(
-        {
-          title: data.title,
-          description: data.description,
-          columnId: panel.columnId,
-          priority: data.priority,
-          status: data.status,
-          tags: data.tags,
-        },
-        { onSuccess: closePanel },
-      );
-    } else if (panel.mode === "edit" && panel.cardId) {
-      updateCard.mutate(
-        {
-          id: panel.cardId,
-          title: data.title,
-          description: data.description,
-          priority: data.priority,
-          status: data.status,
-          tags: data.tags,
-        },
-        {
-          onSuccess: () => {
-            toastManager.add({ type: "success", title: "Card updated" });
-            closePanel();
-          },
-        },
-      );
-    }
-  };
-
-  const form = useForm({
-    defaultValues: getDefaultValues(),
-    onSubmit: async ({ value }) => {
-      const result = cardFormSchema.safeParse(value);
-      if (!result.success) {
-        toastManager.add({ title: "Title is required", type: "error" });
-        return;
-      }
-      handleFormSubmit(result.data);
-    },
+  const {
+    form,
+    isPending,
+    existingCard,
+    containerRef,
+    mode,
+    handleStatusChange,
+    handlePriorityChange,
+    handleTagsChange,
+  } = useCardForm({
+    editorState: panel,
+    onClose: closePanel,
+    autoSave: true,
   });
-
-  useEffect(() => {
-    if (panel.open) {
-      form.reset(getDefaultValues());
-    }
-  }, [panel.open, existingCard, form, getDefaultValues]);
-
-  const isPending = createCard.isPending || updateCard.isPending;
-
-  useEffect(() => {
-    if (!panel.open) return;
-
-    const panelEl = panelRef.current;
-    if (!panelEl) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-        e.preventDefault();
-        form.handleSubmit();
-      }
-    };
-
-    panelEl.addEventListener("keydown", handleKeyDown);
-    return () => panelEl.removeEventListener("keydown", handleKeyDown);
-  }, [panel.open, form]);
 
   if (!panel.open) return null;
 
   return (
     <div
-      ref={panelRef}
+      ref={containerRef}
       className="bg-background flex w-96 flex-shrink-0 flex-col border-l"
     >
       <Form className="flex h-full flex-col">
-        {/* Header with title input and close button */}
+        {/* Header with card ID and close button */}
         <div className="flex items-center gap-2 border-b px-4 py-2">
+          {existingCard && (
+            <span className="text-muted-foreground text-sm font-medium">
+              {existingCard.displayId ?? existingCard.id.slice(0, 8).toUpperCase()}
+            </span>
+          )}
           <div className="flex-1"></div>
           <Button variant="ghost" size="icon-sm" onClick={closePanel}>
             <XIcon />
@@ -274,9 +154,9 @@ export function CardPanel() {
                   {isPending ? (
                     <>
                       <LoaderIcon className="size-4 animate-spin" />
-                      {panel.mode === "create" ? "Creating" : "Saving"}
+                      {mode === "create" ? "Creating" : "Saving"}
                     </>
-                  ) : panel.mode === "create" ? (
+                  ) : mode === "create" ? (
                     "Create"
                   ) : (
                     "Save"
@@ -285,7 +165,7 @@ export function CardPanel() {
               }
             />
             <TooltipPopup>
-              {panel.mode === "create" ? "Create" : "Save"}
+              {mode === "create" ? "Create" : "Save"}
               <KbdGroup>
                 <Kbd>⌘</Kbd>
                 <Kbd>↵</Kbd>

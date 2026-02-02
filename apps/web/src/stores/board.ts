@@ -8,18 +8,18 @@ export const viewModeAtom = atom<ViewMode>("kanban");
 export const priorityFiltersAtom = atom<Set<string>>(new Set<string>());
 export const tagFiltersAtom = atom<Set<string>>(new Set<string>());
 
-// Dialog state (shared between views)
-export const dialogAtom = atom<{
+// Shared type for card editor state (dialog and panel)
+export type CardEditorState = {
   open: boolean;
   mode: "create" | "edit";
   cardId?: string;
   columnId?: string;
-}>({ open: false, mode: "create" });
+};
+
+const initialEditorState: CardEditorState = { open: false, mode: "create" };
+
+// Dialog state (modal for creating/editing cards)
+export const dialogAtom = atom<CardEditorState>(initialEditorState);
 
 // Side panel state for card editing
-export const panelAtom = atom<{
-  open: boolean;
-  mode: "create" | "edit";
-  cardId?: string;
-  columnId?: string;
-}>({ open: false, mode: "create" });
+export const panelAtom = atom<CardEditorState>(initialEditorState);

@@ -19,6 +19,7 @@ import {
 } from "~/components/shared/card-schema";
 import { useBoard } from "~/hooks/use-board";
 import { useDeleteCard } from "~/hooks/use-cards";
+import { useFilteredCards } from "~/hooks/use-filtered-cards";
 import { dialogAtom, priorityFiltersAtom, tagFiltersAtom } from "~/stores/board";
 
 const priorityColors = {
@@ -49,27 +50,7 @@ export function TableView() {
   }, [board]);
 
   // Apply filters
-  const filteredCards = useMemo(() => {
-    if (priorityFilters.size === 0 && tagFilters.size === 0) {
-      return allCards;
-    }
-
-    return allCards.filter((card) => {
-      // Priority filter
-      if (priorityFilters.size > 0) {
-        const cardPriority = card.priority ?? "no priority";
-        if (!priorityFilters.has(cardPriority)) return false;
-      }
-
-      // Tag filter (card must have at least one selected tag)
-      if (tagFilters.size > 0) {
-        const cardTags = safeParseJsonTags(card.tags);
-        if (!cardTags.some((tag) => tagFilters.has(tag))) return false;
-      }
-
-      return true;
-    });
-  }, [allCards, priorityFilters, tagFilters]);
+  const filteredCards = useFilteredCards(allCards, priorityFilters, tagFilters);
 
   if (!board) {
     return (
@@ -86,6 +67,7 @@ export function TableView() {
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-[80px]">ID</TableHead>
             <TableHead className="w-[300px]">Title</TableHead>
             <TableHead>Column</TableHead>
             <TableHead>Priority</TableHead>
@@ -96,7 +78,7 @@ export function TableView() {
         <TableBody>
           {filteredCards.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} className="text-muted-foreground text-center">
+              <TableCell colSpan={6} className="text-muted-foreground text-center">
                 {allCards.length === 0 ? "No cards yet" : "No cards match filters"}
               </TableCell>
             </TableRow>
@@ -105,6 +87,11 @@ export function TableView() {
               const tags = safeParseJsonTags(card.tags);
               return (
                 <TableRow key={card.id}>
+                  <TableCell>
+                    <span className="text-muted-foreground text-xs font-medium">
+                      {card.displayId ?? card.id.slice(0, 8).toUpperCase()}
+                    </span>
+                  </TableCell>
                   <TableCell>
                     <div>
                       <p className="font-medium">{card.title}</p>
