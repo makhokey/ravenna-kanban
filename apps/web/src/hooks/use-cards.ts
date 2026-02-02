@@ -12,6 +12,8 @@ type CreateCardInput = {
   columnId: string;
   // null = no priority, undefined = not provided
   priority?: "low" | "medium" | "high" | null;
+  // null = no status, undefined = not provided
+  status?: "backlog" | "todo" | "in_progress" | "review" | "done" | null;
   // null = no tags, undefined = not provided
   tags?: string[] | null;
 };
@@ -22,6 +24,8 @@ type UpdateCardInput = {
   description?: string;
   // null = clear priority, undefined = unchanged
   priority?: "low" | "medium" | "high" | null;
+  // null = clear status, undefined = unchanged
+  status?: "backlog" | "todo" | "in_progress" | "review" | "done" | null;
   // null = clear tags, undefined = unchanged
   tags?: string[] | null;
 };
@@ -114,6 +118,8 @@ export function useCreateCard() {
           columnId: input.columnId,
           // null or undefined both mean no priority
           priority: input.priority ?? null,
+          // null or undefined both mean no status
+          status: input.status ?? null,
           // null or undefined both mean no tags, empty array also means no tags
           tags: input.tags && input.tags.length > 0 ? JSON.stringify(input.tags) : null,
           position: newPosition,
@@ -177,6 +183,8 @@ export function useUpdateCard() {
           // null = clear, undefined = unchanged
           priority: input.priority !== undefined ? input.priority : card.priority,
           // null = clear, undefined = unchanged
+          status: input.status !== undefined ? input.status : card.status,
+          // null = clear, undefined = unchanged
           tags:
             input.tags !== undefined
               ? input.tags && input.tags.length > 0
@@ -193,9 +201,6 @@ export function useUpdateCard() {
       });
 
       return { previous };
-    },
-    onSuccess: () => {
-      toastManager.add({ type: "success", title: "Card updated" });
     },
     onError: (_err, _input, ctx) => {
       if (ctx?.previous) {

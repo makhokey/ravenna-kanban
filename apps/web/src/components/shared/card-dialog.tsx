@@ -24,12 +24,15 @@ import { useCreateCard, useUpdateCard } from "~/hooks/use-cards";
 import { dialogAtom } from "~/stores/board";
 import {
   cardFormSchema,
+  getColumnStatus,
   safeParseJsonTags,
   type CardFormOutput,
   type CardFormValues,
   type PriorityValue,
+  type StatusValue,
 } from "./card-schema";
 import { PrioritySelect } from "./priority-select";
+import { StatusSelect } from "./status-select";
 import { TagSelect } from "./tag-select";
 
 export function CardDialog() {
@@ -43,6 +46,9 @@ export function CardDialog() {
   const existingCard =
     dialog.mode === "edit" && dialog.cardId ? board?.cardsById[dialog.cardId] : null;
 
+  // Get column name for status auto-selection
+  const column = dialog.columnId ? board?.columnsById[dialog.columnId] : null;
+
   const getDefaultValues = useCallback((): CardFormValues => {
     if (existingCard) {
       const tags = safeParseJsonTags(existingCard.tags);
@@ -50,11 +56,20 @@ export function CardDialog() {
         title: existingCard.title,
         description: existingCard.description ?? "",
         priority: (existingCard.priority as PriorityValue) ?? "no priority",
+        status: (existingCard.status as StatusValue) ?? "backlog",
         tags,
       };
     }
-    return { title: "", description: "", priority: "no priority", tags: [] };
-  }, [existingCard]);
+    // Auto-select status based on column name for new cards
+    const columnStatus = column ? getColumnStatus(column.name) : null;
+    return {
+      title: "",
+      description: "",
+      priority: "no priority",
+      status: columnStatus ?? "backlog",
+      tags: [],
+    };
+  }, [existingCard, column]);
 
   const closeDialog = () => setDialog({ open: false, mode: "create" });
 
@@ -66,6 +81,7 @@ export function CardDialog() {
           description: data.description,
           columnId: dialog.columnId,
           priority: data.priority,
+          status: data.status,
           tags: data.tags,
         },
         { onSuccess: closeDialog },
@@ -77,9 +93,15 @@ export function CardDialog() {
           title: data.title,
           description: data.description,
           priority: data.priority,
+          status: data.status,
           tags: data.tags,
         },
-        { onSuccess: closeDialog },
+        {
+          onSuccess: () => {
+            toastManager.add({ type: "success", title: "Card updated" });
+            closeDialog();
+          },
+        },
       );
     }
   };
@@ -104,7 +126,6 @@ export function CardDialog() {
 
   const isPending = createCard.isPending || updateCard.isPending;
 
-  // Scoped ⌘+Enter keyboard shortcut to submit (within dialog only)
   useEffect(() => {
     if (!dialog.open) return;
 
@@ -125,17 +146,9 @@ export function CardDialog() {
   return (
     <Dialog open={dialog.open} onOpenChange={(open) => !open && closeDialog()}>
       <DialogPopup ref={dialogRef} showCloseButton={false}>
-        <DialogHeader className="flex flex-row items-center justify-between px-4 py-4">
-          <DialogTitle className="text-sm font-medium">
-            {dialog.mode === "create" ? "New Card" : "Edit Card"}
-          </DialogTitle>
-          <DialogClose render={<Button variant="ghost" size="icon" />}>
-            <XIcon className="size-4" />
-          </DialogClose>
-        </DialogHeader>
-
         <Form className="contents">
-          <DialogPanel className="p-4">
+        <DialogHeader className="flex flex-row items-center justify-between pb-0! px-4 py-2">
+            <div className="w-full flex-1">
             <form.Field name="title">
               {(field) => (
                 <Field>
@@ -144,13 +157,20 @@ export function CardDialog() {
                     onBlur={field.handleBlur}
                     onChange={(e) => field.handleChange(e.target.value)}
                     placeholder="Issue title"
-                    className="border-0 px-0 text-lg font-medium shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                    className="border-0 px-0 text-lg! font-medium shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                     autoFocus
-                  />
+                    />
                 </Field>
               )}
             </form.Field>
+              </div>
+         
+          <DialogClose tabIndex={-1} render={<Button variant="link" size="icon-sm" />}>
+            <XIcon />
+          </DialogClose>
+        </DialogHeader>
 
+          <DialogPanel className="px-4">
             <form.Field name="description">
               {(field) => (
                 <Field>
@@ -160,13 +180,25 @@ export function CardDialog() {
                     onChange={(e) => field.handleChange(e.target.value)}
                     placeholder="Description..."
                     unstyled
-                    className="max-h-40 w-full overflow-y-auto [&_textarea]:resize-none [&_textarea]:px-0"
+                    className="max-h-40  text-base w-full overflow-y-auto [&_textarea]:resize-none [&_textarea]:px-0"
                   />
                 </Field>
               )}
             </form.Field>
 
-            <div className="mt-2 flex items-center gap-1">
+          </DialogPanel>
+
+          <DialogFooter className="flex items-center justify-between px-4 py-2">
+            <div className="flex items-center gap-1 w-full" >
+              <form.Field name="status">
+                {(field) => (
+                  <StatusSelect
+                    value={field.state.value as StatusValue}
+                    onChange={(val) => field.handleChange(val)}
+                  />
+                )}
+              </form.Field>
+
               <form.Field name="priority">
                 {(field) => (
                   <PrioritySelect
@@ -185,9 +217,7 @@ export function CardDialog() {
                 )}
               </form.Field>
             </div>
-          </DialogPanel>
 
-          <DialogFooter className="px-4 py-2">
             <Tooltip>
               <TooltipTrigger
                 render={

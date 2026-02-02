@@ -22,6 +22,13 @@
       "when": 1770030633898,
       "tag": "0002_wet_cloak",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1770041246393,
+      "tag": "0003_amazing_sir_ram",
+      "breakpoints": true
     }
   ]
 }

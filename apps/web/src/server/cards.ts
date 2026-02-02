@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from "uuid";
 import {
   createCardServerSchema,
   updateCardServerSchema,
-} from "~/components/kanban/card-schema";
+} from "~/components/shared/card-schema";
 import { getDb } from "~/lib/db";
 import { invalidateBoardCache } from "./cache";
 
@@ -67,6 +67,7 @@ export const createCard = createServerFn({ method: "POST" })
       description: data.description ?? null,
       columnId: data.columnId,
       priority: data.priority ?? null,
+      status: data.status ?? null,
       tags: data.tags && data.tags.length > 0 ? JSON.stringify(data.tags) : null,
       position,
       createdAt: now,
@@ -120,7 +121,7 @@ export const updateCard = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }) => {
     const db = getDb();
-    const { id, tags, priority, ...updates } = data;
+    const { id, tags, priority, status, ...updates } = data;
 
     // Get card to find column and boardId for cache invalidation
     const [card] = await db.select().from(cards).where(eq(cards.id, id));
@@ -134,6 +135,11 @@ export const updateCard = createServerFn({ method: "POST" })
     // Handle priority: null = clear, undefined = unchanged
     if (priority !== undefined) {
       updateValues.priority = priority;
+    }
+
+    // Handle status: null = clear, undefined = unchanged
+    if (status !== undefined) {
+      updateValues.status = status;
     }
 
     // Handle tags: null = clear, undefined = unchanged

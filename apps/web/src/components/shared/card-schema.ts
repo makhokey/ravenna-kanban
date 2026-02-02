@@ -1,4 +1,9 @@
 import {
+  CircleIcon,
+  CircleDashedIcon,
+  CircleDotIcon,
+  CircleDotDashedIcon,
+  CheckCircle2Icon,
   EllipsisIcon,
   SignalHighIcon,
   SignalLowIcon,
@@ -7,8 +12,16 @@ import {
 import { z } from "zod";
 
 // ============================================================================
-// Constants - Single source of truth for priority and tag options
+// Constants - Single source of truth for priority, status, and tag options
 // ============================================================================
+
+export const STATUS_OPTIONS = [
+  { label: "Backlog", value: "backlog", icon: CircleDashedIcon, color: "text-muted-foreground", percent: 0, shortcut: "1" },
+  { label: "Todo", value: "todo", icon: CircleIcon, color: "text-muted-foreground", percent: 0, shortcut: "2" },
+  { label: "In Progress", value: "in_progress", icon: CircleDotDashedIcon, color: "text-yellow-500", percent: 50, shortcut: "3" },
+  { label: "Review", value: "review", icon: CircleDotIcon, color: "text-blue-500", percent: 75, shortcut: "4" },
+  { label: "Done", value: "done", icon: CheckCircle2Icon, color: "text-green-500", percent: 100, shortcut: "5" },
+] as const;
 
 export const PRIORITY_OPTIONS = [
   { label: "No priority", value: "no priority", icon: EllipsisIcon, shortcut: "0" },
@@ -35,6 +48,8 @@ export const TAG_OPTIONS = [
 // Derived Types
 // ============================================================================
 
+export type StatusValue = (typeof STATUS_OPTIONS)[number]["value"];
+export type StatusOption = (typeof STATUS_OPTIONS)[number];
 export type PriorityValue = (typeof PRIORITY_OPTIONS)[number]["value"];
 export type PriorityOption = (typeof PRIORITY_OPTIONS)[number];
 export type TagValue = (typeof TAG_OPTIONS)[number]["value"];
@@ -46,6 +61,9 @@ export type Priority = Exclude<PriorityValue, "no priority">;
 // ============================================================================
 // Helper Functions
 // ============================================================================
+
+export const getStatusOption = (value: string | null | undefined): StatusOption =>
+  STATUS_OPTIONS.find((opt) => opt.value === value) ?? STATUS_OPTIONS[0];
 
 export const getPriorityOption = (value: string): PriorityOption =>
   PRIORITY_OPTIONS.find((opt) => opt.value === value) ?? PRIORITY_OPTIONS[0];
@@ -63,6 +81,21 @@ export const safeParseJsonTags = (jsonString: string | null | undefined): string
   } catch {
     return [];
   }
+};
+
+// Map column name to status value
+const COLUMN_STATUS_MAP: Record<string, StatusValue> = {
+  backlog: "backlog",
+  todo: "todo",
+  to_do: "todo",
+  in_progress: "in_progress",
+  review: "review",
+  done: "done",
+};
+
+export const getColumnStatus = (columnName: string): StatusValue | null => {
+  const normalized = columnName.toLowerCase().replace(/\s+/g, "_");
+  return COLUMN_STATUS_MAP[normalized] ?? null;
 };
 
 // ============================================================================
@@ -83,6 +116,9 @@ export const cardFormSchema = z.object({
     .default("no priority")
     // Transform "no priority" to null (clear) vs undefined (unchanged)
     .transform((val) => (val === "no priority" ? null : val)),
+  status: z
+    .enum(["backlog", "todo", "in_progress", "review", "done"])
+    .default("backlog"),
   tags: z
     .array(z.string())
     .optional()
@@ -101,17 +137,17 @@ export const createCardServerSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   columnId: z.string().min(1, "Column ID is required"),
-  priority: z.enum(["low", "medium", "high"]).optional(),
-  tags: z.array(z.string()).optional(),
+  priority: z.enum(["low", "medium", "high"]).nullable().optional(),
+  status: z.enum(["backlog", "todo", "in_progress", "review", "done"]).nullable().optional(),
+  tags: z.array(z.string()).nullable().optional(),
 });
 
 export const updateCardServerSchema = z.object({
   id: z.uuid({ message: "Invalid card ID" }),
   title: z.string().min(1, "Title is required").optional(),
   description: z.string().optional(),
-  // null = clear, undefined = unchanged
   priority: z.enum(["low", "medium", "high"]).nullable().optional(),
-  // null = clear, undefined = unchanged
+  status: z.enum(["backlog", "todo", "in_progress", "review", "done"]).nullable().optional(),
   tags: z.array(z.string()).nullable().optional(),
 });
 

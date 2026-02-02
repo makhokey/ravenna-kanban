@@ -14,29 +14,29 @@ import { Kbd } from "@repo/ui/components/kbd";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "@repo/ui/components/tooltip";
 import { useState } from "react";
 import {
-  getPriorityOption,
-  PRIORITY_OPTIONS,
-  type PriorityOption,
-  type PriorityValue,
+  getStatusOption,
+  STATUS_OPTIONS,
+  type StatusOption,
+  type StatusValue,
 } from "./card-schema";
+import { StatusIcon } from "./status-icon";
 
-type PrioritySelectProps = {
-  value: PriorityValue;
-  onChange: (value: PriorityValue) => void;
+type StatusSelectProps = {
+  value: StatusValue | null | undefined;
+  onChange: (value: StatusValue) => void;
   iconOnly?: boolean;
 };
 
-export function PrioritySelect({ value, onChange, iconOnly }: PrioritySelectProps) {
+export function StatusSelect({ value, onChange, iconOnly }: StatusSelectProps) {
   const [open, setOpen] = useState(false);
-  const selected = getPriorityOption(value);
-  const Icon = selected.icon;
+  const selected = getStatusOption(value);
 
   return (
-    <Combobox<PriorityOption>
+    <Combobox<StatusOption>
       autoHighlight
-      items={PRIORITY_OPTIONS}
+      items={STATUS_OPTIONS}
       value={selected}
-      onValueChange={(val) => onChange((val?.value ?? "no priority") as PriorityValue)}
+      onValueChange={(val) => onChange((val?.value ?? "backlog") as StatusValue)}
       open={open}
       onOpenChange={setOpen}
     >
@@ -47,11 +47,11 @@ export function PrioritySelect({ value, onChange, iconOnly }: PrioritySelectProp
               render={
                 iconOnly ? (
                   <Button variant="ghost" size="icon-xs">
-                    <Icon className="size-4" />
+                    <StatusIcon status={selected.value} size={16} />
                   </Button>
                 ) : (
                   <Button variant="outline" size="xs" className="gap-2">
-                    <Icon />
+                    <StatusIcon status={selected.value} size={16} />
                     <span>{selected.label}</span>
                   </Button>
                 )
@@ -60,18 +60,18 @@ export function PrioritySelect({ value, onChange, iconOnly }: PrioritySelectProp
           }
         />
         <TooltipPopup>
-          Priority <Kbd>P</Kbd>
+          Status <Kbd>S</Kbd>
         </TooltipPopup>
       </Tooltip>
       <ComboboxPopup>
         <ComboboxInput
           className="border-0 p-2 shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
           showTrigger={false}
-          placeholder="Set priority to..."
-          endAddon={<Kbd>P</Kbd>}
+          placeholder="Set status to..."
+          endAddon={<Kbd>S</Kbd>}
           onKeyDown={(e) => {
-            if (["0", "1", "2", "3"].includes(e.key)) {
-              const option = PRIORITY_OPTIONS[parseInt(e.key)];
+            if (["1", "2", "3", "4", "5"].includes(e.key)) {
+              const option = STATUS_OPTIONS[parseInt(e.key) - 1];
               if (option) {
                 e.preventDefault();
                 onChange(option.value);
@@ -81,11 +81,11 @@ export function PrioritySelect({ value, onChange, iconOnly }: PrioritySelectProp
           }}
         />
         <ComboboxSeparator />
-        <ComboboxEmpty>No priority found.</ComboboxEmpty>
+        <ComboboxEmpty>No status found.</ComboboxEmpty>
         <ComboboxList className="w-full">
-          {(item: PriorityOption) => (
+          {(item: StatusOption) => (
             <ComboboxItem className="w-full" key={item.value} value={item}>
-              <item.icon className="size-4" />
+              <StatusIcon status={item.value} size={16} />
               <span className="flex-1">{item.label}</span>
               <ComboboxItemIndicator />
               <Kbd>{item.shortcut}</Kbd>

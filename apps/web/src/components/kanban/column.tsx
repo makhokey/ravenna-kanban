@@ -4,7 +4,8 @@ import { cn } from "@repo/ui/lib/utils";
 import { useAtomValue, useSetAtom } from "jotai";
 import { Plus } from "lucide-react";
 import { useCallback, useMemo } from "react";
-import { safeParseJsonTags } from "~/components/shared/card-schema";
+import { getColumnStatus, safeParseJsonTags } from "~/components/shared/card-schema";
+import { StatusIcon } from "~/components/shared/status-icon";
 import { useDeleteCard } from "~/hooks/use-cards";
 import { dialogAtom, priorityFiltersAtom, tagFiltersAtom } from "~/stores/board";
 import { activeIdAtom, insertIndexAtom, targetColumnIdAtom } from "~/stores/kanban-drag";
@@ -29,6 +30,9 @@ export function Column({ column, cardIds, cardsById }: ColumnProps) {
   const activeId = useAtomValue(activeIdAtom);
   const targetColumnId = useAtomValue(targetColumnIdAtom);
   const insertIndex = useAtomValue(insertIndexAtom);
+
+  // Get status icon for column header
+  const columnStatus = useMemo(() => getColumnStatus(column.name), [column.name]);
 
   // Filter cards based on priority and tag filters
   const filteredCardIds = useMemo(() => {
@@ -72,13 +76,14 @@ export function Column({ column, cardIds, cardsById }: ColumnProps) {
   return (
     <div
       className={cn(
-        "bg-accent flex h-full w-72 flex-shrink-0 px-2 flex-col rounded-lg",
+        "bg-accent flex h-full w-82 flex-shrink-0 px-2 flex-col rounded-lg",
         isDropTarget && "bg-primary",
       )}
     >
       {/* Column Header */}
       <div className="flex items-center justify-between gap-2 p-3">
         <div className="flex items-center gap-2">
+          {columnStatus && <StatusIcon status={columnStatus} size={16} />}
           <p className="text-sm font-medium">{column.name}</p>
           <span className="text-muted-foreground text-xs">{filteredCardIds.length}</span>
         </div>
@@ -133,7 +138,7 @@ export function Column({ column, cardIds, cardsById }: ColumnProps) {
 
         {/* Add Card Button - visible on column hover */}
         <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
           className="opacity-0 transition-opacity group-hover/column:opacity-100"
           onClick={() => setDialog({ open: true, mode: "create", columnId: column.id })}

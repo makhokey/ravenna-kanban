@@ -19,9 +19,10 @@ import { getSelectedTags, TAG_OPTIONS, type TagOption } from "./card-schema";
 type TagSelectProps = {
   value: string[];
   onChange: (value: string[]) => void;
+  iconOnly?: boolean;
 };
 
-export function TagSelect({ value, onChange }: TagSelectProps) {
+export function TagSelect({ value, onChange, iconOnly }: TagSelectProps) {
   const [open, setOpen] = useState(false);
   const selectedTags = getSelectedTags(value);
 
@@ -30,7 +31,6 @@ export function TagSelect({ value, onChange }: TagSelectProps) {
       return (
         <>
           <TagIcon />
-          <span>Tags</span>
         </>
       );
     }
@@ -58,6 +58,22 @@ export function TagSelect({ value, onChange }: TagSelectProps) {
     );
   };
 
+  const renderIconOnlyTrigger = () => {
+    if (selectedTags.length === 0) {
+      return <TagIcon className="size-4" />;
+    }
+    return (
+      <span className="flex -space-x-1">
+        {selectedTags.slice(0, 3).map((tag) => (
+          <span
+            key={tag.value}
+            className={`size-3 rounded-full ${tag.color} ring-background ring-1`}
+          />
+        ))}
+      </span>
+    );
+  };
+
   return (
     <Combobox
       autoHighlight
@@ -73,9 +89,15 @@ export function TagSelect({ value, onChange }: TagSelectProps) {
           render={
             <ComboboxTrigger
               render={
-                <Button variant="outline" size="xs" className="gap-2">
-                  {renderTrigger()}
-                </Button>
+                iconOnly ? (
+                  <Button variant="ghost" size="icon-xs">
+                    {renderIconOnlyTrigger()}
+                  </Button>
+                ) : (
+                  <Button variant="outline" size="xs" className="gap-2">
+                    {renderTrigger()}
+                  </Button>
+                )
               }
             />
           }

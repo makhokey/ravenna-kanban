@@ -1,9 +1,10 @@
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
+import { Popover, PopoverPopup, PopoverTrigger } from "@repo/ui/components/popover";
 import { Toggle, ToggleGroup } from "@repo/ui/components/toggle-group";
 import { cn } from "@repo/ui/lib/utils";
 import { useAtom } from "jotai";
-import { LayoutGrid, List, X } from "lucide-react";
+import { LayoutGrid, List, SlidersHorizontalIcon, X } from "lucide-react";
 import { PRIORITY_OPTIONS, TAG_OPTIONS } from "~/components/shared/card-schema";
 import {
   priorityFiltersAtom,
@@ -49,7 +50,7 @@ export function FilterBar() {
   const hasFilters = priorityFilters.size > 0 || tagFilters.size > 0;
 
   return (
-    <div className="flex flex-wrap items-center gap-4 border-b px-4 py-3">
+    <div className="flex flex-wrap items-center gap-4 border-b px-4 py-2">
       {/* Priority Filters */}
       <div className="flex items-center gap-1">
         <span className="text-muted-foreground mr-1 text-sm">Priority:</span>
@@ -97,23 +98,39 @@ export function FilterBar() {
       {/* Spacer */}
       <div className="flex-1" />
 
-      {/* View Toggle */}
-      <ToggleGroup
-        value={[viewMode]}
-        onValueChange={(value) => {
-          const newValue = value[0] as ViewMode | undefined;
-          if (newValue) setViewMode(newValue);
-        }}
-        variant="outline"
-        size="sm"
-      >
-        <Toggle value="kanban">
-          <LayoutGrid className="size-4" />
-        </Toggle>
-        <Toggle value="table">
-          <List className="size-4" />
-        </Toggle>
-      </ToggleGroup>
+      <Popover>
+        <PopoverTrigger
+          render={
+            <Button variant="outline" size="sm">
+              <SlidersHorizontalIcon />
+              Display
+            </Button>
+          }
+        />
+        <PopoverPopup align="end" className="w-48">
+          <div className="flex flex-col gap-2">
+            <span className="text-muted-foreground text-xs font-medium">View</span>
+            <ToggleGroup
+              value={[viewMode]}
+              onValueChange={(value) => {
+                const newValue = value[0] as ViewMode | undefined;
+                if (newValue) setViewMode(newValue);
+              }}
+              variant="outline"
+              className="w-full"
+            >
+              <Toggle value="kanban" className="flex-1 p-2">
+                <LayoutGrid className="size-4" />
+                Kanban
+              </Toggle>
+              <Toggle value="table" className="flex-1 p-2">
+                <List className="size-4" />
+                Table
+              </Toggle>
+            </ToggleGroup>
+          </div>
+        </PopoverPopup>
+      </Popover>
     </div>
   );
 }

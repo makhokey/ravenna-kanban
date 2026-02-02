@@ -15,10 +15,19 @@ import { cn } from "@repo/ui/lib/utils";
 import { useSetAtom } from "jotai";
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { memo, useMemo, useState } from "react";
+import { useUpdateCard } from "~/hooks/use-cards";
 import { dialogAtom } from "~/stores/board";
 import type { CardData } from "~/types/board";
 import type { CardDragData } from "~/types/dnd";
-import { getPriorityOption, TAG_OPTIONS } from "~/components/shared/card-schema";
+import {
+  getSelectedTags,
+  safeParseJsonTags,
+  type PriorityValue,
+  type StatusValue,
+} from "~/components/shared/card-schema";
+import { PrioritySelect } from "~/components/shared/priority-select";
+import { StatusSelect } from "~/components/shared/status-select";
+import { TagSelect } from "~/components/shared/tag-select";
 
 interface CardProps {
   card: CardData;
@@ -26,11 +35,9 @@ interface CardProps {
   isDragOverlay?: boolean;
 }
 
-const getTagColor = (tagValue: string) =>
-  TAG_OPTIONS.find((opt) => opt.value === tagValue)?.color ?? "bg-gray-500";
-
 function CardComponent({ card, onDelete, isDragOverlay }: CardProps) {
   const setDialog = useSetAtom(dialogAtom);
+  const updateCard = useUpdateCard();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const { attributes, listeners, setNodeRef, isDragging } = useSortable({
@@ -38,57 +45,65 @@ function CardComponent({ card, onDelete, isDragOverlay }: CardProps) {
     data: { type: "card", card } satisfies CardDragData,
   });
 
-  const tags = useMemo(
-    () => (card.tags ? JSON.parse(card.tags) : []) as string[],
-    [card.tags],
-  );
+  const tags = useMemo(() => safeParseJsonTags(card.tags), [card.tags]);
+  const selectedTags = useMemo(() => getSelectedTags(tags), [tags]);
+
+  // Format date like "Mar 17"
+  const formattedDate = useMemo(() => {
+    const date = card.createdAt instanceof Date ? card.createdAt : new Date(card.createdAt);
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  }, [card.createdAt]);
+
+  const handlePriorityChange = (priority: PriorityValue) => {
+    updateCard.mutate({
+      id: card.id,
+      priority: priority === "no priority" ? null : priority,
+    });
+  };
+
+  const handleTagsChange = (newTags: string[]) => {
+    updateCard.mutate({
+      id: card.id,
+      tags: newTags.length > 0 ? newTags : null,
+    });
+  };
+
+  const handleStatusChange = (status: StatusValue) => {
+    updateCard.mutate({
+      id: card.id,
+      status,
+    });
+  };
 
   return (
     <div
       ref={setNodeRef}
       className={cn(
-        "bg-card text-card-foreground group relative h-32 overflow-hidden rounded p-2",
+        "bg-card text-card-foreground group relative flex h-auto min-h-32 flex-col gap-2 overflow-hidden rounded-lg border p-3",
         isDragging && !isDragOverlay && "opacity-0",
       )}
       {...attributes}
       {...listeners}
     >
-      <div className="flex items-start gap-2">
-        <div className="min-w-0 flex-1">
-          <h3 className="line-clamp-2 text-sm font-medium leading-tight">{card.title}</h3>
-          {card.description && (
-            <p className="text-muted-foreground mt-1 line-clamp-2 text-sm">
-              {card.description}
-            </p>
-          )}
-
-          <div className="mt-2 flex max-h-6 flex-wrap items-center gap-1.5 overflow-hidden">
-            {card.priority && (() => {
-              const priorityOption = getPriorityOption(card.priority);
-              const PriorityIcon = priorityOption.icon;
-              return (
-                <span
-                  className="flex items-center rounded border p-0.5"
-                >
-                  <PriorityIcon className="size-4" />
-                </span>
-              );
-            })()}
-
-            {tags.map((tag) => {
-              const color = getTagColor(tag);
-              return (
-                <Badge key={tag} variant="outline" className="capitalize" size="sm">
-                  <span className={`size-2 rounded-full ${color}`} />
-                  {tag}
-                </Badge>
-              );
-            })}
-          </div>
+      {/* Header: Priority + ID | Status + Menu */}
+      <div
+        className="flex items-center justify-between"
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-2">
+         
+          <span className="text-muted-foreground text-xs font-medium">
+            {card.id.slice(0, 8).toUpperCase()}
+          </span>
         </div>
-
-        <div className="opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
-          <Menu>
+        <div className="flex items-center gap-1">
+          <StatusSelect
+            value={card.status as StatusValue}
+            onChange={handleStatusChange}
+            iconOnly
+          />
+          {/* <div className="opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+            <Menu>
             <MenuTrigger
               render={
                 <Button variant="ghost" size="icon-xs" aria-label="Card actions">
@@ -96,7 +111,7 @@ function CardComponent({ card, onDelete, isDragOverlay }: CardProps) {
                 </Button>
               }
             />
-            <MenuPopup align="end">
+            <MenuPopup align="start">
               <MenuItem
                 onClick={() =>
                   setDialog({
@@ -118,32 +133,64 @@ function CardComponent({ card, onDelete, isDragOverlay }: CardProps) {
               )}
             </MenuPopup>
           </Menu>
-
-          {/* Delete confirmation dialog */}
-          {onDelete && (
-            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-              <AlertDialogPopup>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete card</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to delete "{card.title}"? This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogClose render={<Button variant="outline">Cancel</Button>} />
-                  <AlertDialogClose
-                    render={
-                      <Button variant="destructive" onClick={() => onDelete(card.id)}>
-                        Delete
-                      </Button>
-                    }
-                  />
-                </AlertDialogFooter>
-              </AlertDialogPopup>
-            </AlertDialog>
-          )}
+          </div> */}
         </div>
       </div>
+
+      {/* Body: Title */}
+      <h3 className="line-clamp-2 text-sm font-semibold leading-tight">{card.title}</h3>
+
+      {/* Tags row */}
+      {selectedTags.length > 0 && (
+        <div
+          className="flex flex-wrap items-center gap-1.5"
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          {selectedTags.map((tag) => (
+            <Badge key={tag.value} variant="outline" className="capitalize rounded-full" size="sm">
+              <span className={`size-2 rounded-full ${tag.color}`} />
+              {tag.label}
+            </Badge>
+          ))}
+        </div>
+      )}
+
+      {/* Footer: Date | Tag selector */}
+      <div
+        className="mt-auto flex items-center justify-between"
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <span className="text-muted-foreground text-xs">{formattedDate}</span>
+ <PrioritySelect
+            value={(card.priority as PriorityValue) ?? "no priority"}
+            onChange={handlePriorityChange}
+            iconOnly
+          />
+      </div>
+
+      {/* Delete confirmation dialog */}
+      {onDelete && (
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogPopup>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete card</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete "{card.title}"? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogClose render={<Button variant="outline">Cancel</Button>} />
+              <AlertDialogClose
+                render={
+                  <Button variant="destructive" onClick={() => onDelete(card.id)}>
+                    Delete
+                  </Button>
+                }
+              />
+            </AlertDialogFooter>
+          </AlertDialogPopup>
+        </AlertDialog>
+      )}
     </div>
   );
 }
@@ -155,6 +202,7 @@ export const Card = memo(CardComponent, (prev, next) => {
     prev.card.title === next.card.title &&
     prev.card.description === next.card.description &&
     prev.card.priority === next.card.priority &&
+    prev.card.status === next.card.status &&
     prev.card.tags === next.card.tags &&
     prev.card.columnId === next.card.columnId &&
     prev.isDragOverlay === next.isDragOverlay &&

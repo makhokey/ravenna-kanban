@@ -25,6 +25,7 @@ export const cards = sqliteTable("cards", {
   description: text("description"),
   position: text("position").notNull(),
   priority: text("priority"), // low, medium, high
+  status: text("status"), // backlog, todo, in_progress, review, done
   tags: text("tags"), // JSON array as string
   columnId: text("column_id")
     .notNull()
