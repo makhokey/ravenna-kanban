@@ -3,6 +3,7 @@ import { Field } from "@repo/ui/components/field";
 import { Form } from "@repo/ui/components/form";
 import { Input } from "@repo/ui/components/input";
 import { Kbd, KbdGroup } from "@repo/ui/components/kbd";
+import { Separator } from "@repo/ui/components/separator";
 import { Textarea } from "@repo/ui/components/textarea";
 import { toastManager } from "@repo/ui/components/toast";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "@repo/ui/components/tooltip";
@@ -25,7 +26,6 @@ import {
 import { PrioritySelect } from "./priority-select";
 import { StatusSelect } from "./status-select";
 import { TagSelect } from "./tag-select";
-import { Separator } from "@repo/ui/components/separator";
 
 export function CardPanel() {
   const [panel, setPanel] = useAtom(panelAtom);
@@ -64,6 +64,31 @@ export function CardPanel() {
   }, [existingCard, column]);
 
   const closePanel = () => setPanel({ open: false, mode: "create" });
+
+  // Auto-save handlers for edit mode
+  const handleStatusChange = (status: StatusValue) => {
+    if (panel.mode === "edit" && panel.cardId) {
+      updateCard.mutate({ id: panel.cardId, status });
+    }
+  };
+
+  const handlePriorityChange = (priority: PriorityValue) => {
+    if (panel.mode === "edit" && panel.cardId) {
+      updateCard.mutate({
+        id: panel.cardId,
+        priority: priority === "no priority" ? null : priority,
+      });
+    }
+  };
+
+  const handleTagsChange = (tags: string[]) => {
+    if (panel.mode === "edit" && panel.cardId) {
+      updateCard.mutate({
+        id: panel.cardId,
+        tags: tags.length > 0 ? tags : null,
+      });
+    }
+  };
 
   const handleFormSubmit = (data: CardFormOutput) => {
     if (panel.mode === "create" && panel.columnId) {
@@ -140,14 +165,12 @@ export function CardPanel() {
   return (
     <div
       ref={panelRef}
-      className="w-96 flex-shrink-0 border-l bg-background flex flex-col"
+      className="bg-background flex w-96 flex-shrink-0 flex-col border-l"
     >
-      <Form className="flex flex-col h-full">
+      <Form className="flex h-full flex-col">
         {/* Header with title input and close button */}
-        <div className="flex items-center gap-2 px-4 py-2 border-b">
-          <div className="flex-1">
-          
-          </div>
+        <div className="flex items-center gap-2 border-b px-4 py-2">
+          <div className="flex-1"></div>
           <Button variant="ghost" size="icon-sm" onClick={closePanel}>
             <XIcon />
           </Button>
@@ -170,64 +193,72 @@ export function CardPanel() {
                 </Field>
               )}
             </form.Field>
-          <form.Field name="description">
-            {(field) => (
-              <Field>
-                <Textarea
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  placeholder="Description..."
-                  unstyled
-                  className="min-h-32 max-h-42 overflow-y-auto text-base w-full [&_textarea]:resize-none [&_textarea]:px-0"
-                />
-              </Field>
-            )}
-          </form.Field>
-          {/* Properties section */}
-          <div className="flex flex-col gap-3 py-3 mt-2">
-            {/* Status row */}
-            <div className="flex items-center gap-3">
-              <span className="text-muted-foreground text-sm w-20">Status</span>
-              <form.Field name="status">
-                {(field) => (
-                  <StatusSelect
-                    value={field.state.value as StatusValue}
-                    onChange={(val) => field.handleChange(val)}
+            <form.Field name="description">
+              {(field) => (
+                <Field>
+                  <Textarea
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="Description..."
+                    unstyled
+                    className="max-h-42 min-h-32 w-full overflow-y-auto text-base [&_textarea]:resize-none [&_textarea]:px-0"
                   />
-                )}
-              </form.Field>
-            </div>
+                </Field>
+              )}
+            </form.Field>
+            {/* Properties section */}
+            <div className="mt-2 flex flex-col gap-3 py-3">
+              {/* Status row */}
+              <div className="flex items-center gap-3">
+                <span className="text-muted-foreground w-20 text-sm">Status</span>
+                <form.Field name="status">
+                  {(field) => (
+                    <StatusSelect
+                      value={field.state.value as StatusValue}
+                      onChange={(val) => {
+                        field.handleChange(val);
+                        handleStatusChange(val);
+                      }}
+                    />
+                  )}
+                </form.Field>
+              </div>
 
-            {/* Priority row */}
-            <div className="flex items-center gap-3">
-              <span className="text-muted-foreground text-sm w-20">Priority</span>
-              <form.Field name="priority">
-                {(field) => (
-                  <PrioritySelect
-                    value={(field.state.value ?? "no priority") as PriorityValue}
-                    onChange={(val) => field.handleChange(val)}
-                  />
-                )}
-              </form.Field>
-            </div>
+              {/* Priority row */}
+              <div className="flex items-center gap-3">
+                <span className="text-muted-foreground w-20 text-sm">Priority</span>
+                <form.Field name="priority">
+                  {(field) => (
+                    <PrioritySelect
+                      value={(field.state.value ?? "no priority") as PriorityValue}
+                      onChange={(val) => {
+                        field.handleChange(val);
+                        handlePriorityChange(val);
+                      }}
+                    />
+                  )}
+                </form.Field>
+              </div>
 
-            <div className="flex items-center gap-3">
-              <span className="text-muted-foreground text-sm w-20">Tags</span>
-              <form.Field name="tags">
-                {(field) => (
-                  <TagSelect
-                    value={field.state.value ?? []}
-                    onChange={(val) => field.handleChange(val)}
-                  />
-                )}
-              </form.Field>
+              <div className="flex items-center gap-3">
+                <span className="text-muted-foreground w-20 text-sm">Tags</span>
+                <form.Field name="tags">
+                  {(field) => (
+                    <TagSelect
+                      value={field.state.value ?? []}
+                      onChange={(val) => {
+                        field.handleChange(val);
+                        handleTagsChange(val);
+                      }}
+                    />
+                  )}
+                </form.Field>
+              </div>
             </div>
-          </div>
           </div>
           <Separator />
         </div>
-        
 
         {/* Footer with selectors and save button */}
         <div className="flex items-center justify-end px-4 py-2">

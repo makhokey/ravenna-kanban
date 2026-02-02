@@ -6,7 +6,6 @@ import {
   DialogHeader,
   DialogPanel,
   DialogPopup,
-  DialogTitle,
 } from "@repo/ui/components/dialog";
 import { Field } from "@repo/ui/components/field";
 import { Form } from "@repo/ui/components/form";
@@ -147,28 +146,28 @@ export function CardDialog() {
     <Dialog open={dialog.open} onOpenChange={(open) => !open && closeDialog()}>
       <DialogPopup ref={dialogRef} showCloseButton={false}>
         <Form className="contents">
-        <DialogHeader className="flex flex-row items-center justify-between pb-0! px-4 py-2">
+          <DialogHeader className="flex flex-row items-center justify-between px-4 py-2 pb-0!">
             <div className="w-full flex-1">
-            <form.Field name="title">
-              {(field) => (
-                <Field>
-                  <Input
-                    value={field.state.value}
-                    onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    placeholder="Issue title"
-                    className="border-0 px-0 text-lg! font-medium shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                    autoFocus
+              <form.Field name="title">
+                {(field) => (
+                  <Field>
+                    <Input
+                      value={field.state.value}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      placeholder="Issue title"
+                      className="border-0 px-0 text-lg! font-medium shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                      autoFocus
                     />
-                </Field>
-              )}
-            </form.Field>
-              </div>
-         
-          <DialogClose tabIndex={-1} render={<Button variant="link" size="icon-sm" />}>
-            <XIcon />
-          </DialogClose>
-        </DialogHeader>
+                  </Field>
+                )}
+              </form.Field>
+            </div>
+
+            <DialogClose tabIndex={-1} render={<Button variant="link" size="icon-sm" />}>
+              <XIcon />
+            </DialogClose>
+          </DialogHeader>
 
           <DialogPanel className="px-4">
             <form.Field name="description">
@@ -180,16 +179,15 @@ export function CardDialog() {
                     onChange={(e) => field.handleChange(e.target.value)}
                     placeholder="Description..."
                     unstyled
-                    className="max-h-40  text-base w-full overflow-y-auto [&_textarea]:resize-none [&_textarea]:px-0"
+                    className="max-h-40 w-full overflow-y-auto text-base [&_textarea]:resize-none [&_textarea]:px-0"
                   />
                 </Field>
               )}
             </form.Field>
-
           </DialogPanel>
 
           <DialogFooter className="flex items-center justify-between px-4 py-2">
-            <div className="flex items-center gap-1 w-full" >
+            <div className="flex w-full items-center gap-1">
               <form.Field name="status">
                 {(field) => (
                   <StatusSelect

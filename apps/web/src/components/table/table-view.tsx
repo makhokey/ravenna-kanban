@@ -74,7 +74,9 @@ export function TableView() {
   if (!board) {
     return (
       <div className="flex h-full items-center justify-center">
-        <p className="text-muted-foreground">No board found. Create one to get started.</p>
+        <p className="text-muted-foreground">
+          No board found. Create one to get started.
+        </p>
       </div>
     );
   }
@@ -117,25 +119,33 @@ export function TableView() {
                     <Badge variant="outline">{card.columnName}</Badge>
                   </TableCell>
                   <TableCell>
-                    {card.priority && (() => {
-                      const priorityOption = getPriorityOption(card.priority);
-                      const PriorityIcon = priorityOption.icon;
-                      return (
-                        <span
-                          className={cn(
-                            "inline-flex items-center rounded-full p-1",
-                            priorityColors[card.priority as keyof typeof priorityColors],
-                          )}
-                        >
-                          <PriorityIcon className="size-3" />
-                        </span>
-                      );
-                    })()}
+                    {card.priority &&
+                      (() => {
+                        const priorityOption = getPriorityOption(card.priority);
+                        const PriorityIcon = priorityOption.icon;
+                        return (
+                          <span
+                            className={cn(
+                              "inline-flex items-center rounded-full p-1",
+                              priorityColors[
+                                card.priority as keyof typeof priorityColors
+                              ],
+                            )}
+                          >
+                            <PriorityIcon className="size-3" />
+                          </span>
+                        );
+                      })()}
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
                       {tags.map((tag) => (
-                        <Badge key={tag} variant="outline" size="sm" className="capitalize">
+                        <Badge
+                          key={tag}
+                          variant="outline"
+                          size="sm"
+                          className="capitalize"
+                        >
                           <span className={cn("size-2 rounded-full", getTagColor(tag))} />
                           {tag}
                         </Badge>

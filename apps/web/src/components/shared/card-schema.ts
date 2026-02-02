@@ -1,9 +1,9 @@
 import {
-  CircleIcon,
-  CircleDashedIcon,
-  CircleDotIcon,
-  CircleDotDashedIcon,
   CheckCircle2Icon,
+  CircleDashedIcon,
+  CircleDotDashedIcon,
+  CircleDotIcon,
+  CircleIcon,
   EllipsisIcon,
   SignalHighIcon,
   SignalLowIcon,
@@ -16,11 +16,46 @@ import { z } from "zod";
 // ============================================================================
 
 export const STATUS_OPTIONS = [
-  { label: "Backlog", value: "backlog", icon: CircleDashedIcon, color: "text-muted-foreground", percent: 0, shortcut: "1" },
-  { label: "Todo", value: "todo", icon: CircleIcon, color: "text-muted-foreground", percent: 0, shortcut: "2" },
-  { label: "In Progress", value: "in_progress", icon: CircleDotDashedIcon, color: "text-yellow-500", percent: 50, shortcut: "3" },
-  { label: "Review", value: "review", icon: CircleDotIcon, color: "text-blue-500", percent: 75, shortcut: "4" },
-  { label: "Done", value: "done", icon: CheckCircle2Icon, color: "text-green-500", percent: 100, shortcut: "5" },
+  {
+    label: "Backlog",
+    value: "backlog",
+    icon: CircleDashedIcon,
+    color: "text-muted-foreground",
+    percent: 0,
+    shortcut: "1",
+  },
+  {
+    label: "Todo",
+    value: "todo",
+    icon: CircleIcon,
+    color: "text-muted-foreground",
+    percent: 0,
+    shortcut: "2",
+  },
+  {
+    label: "In Progress",
+    value: "in_progress",
+    icon: CircleDotDashedIcon,
+    color: "text-yellow-500",
+    percent: 50,
+    shortcut: "3",
+  },
+  {
+    label: "Review",
+    value: "review",
+    icon: CircleDotIcon,
+    color: "text-blue-500",
+    percent: 75,
+    shortcut: "4",
+  },
+  {
+    label: "Done",
+    value: "done",
+    icon: CheckCircle2Icon,
+    color: "text-green-500",
+    percent: 100,
+    shortcut: "5",
+  },
 ] as const;
 
 export const PRIORITY_OPTIONS = [
@@ -116,9 +151,7 @@ export const cardFormSchema = z.object({
     .default("no priority")
     // Transform "no priority" to null (clear) vs undefined (unchanged)
     .transform((val) => (val === "no priority" ? null : val)),
-  status: z
-    .enum(["backlog", "todo", "in_progress", "review", "done"])
-    .default("backlog"),
+  status: z.enum(["backlog", "todo", "in_progress", "review", "done"]).default("backlog"),
   tags: z
     .array(z.string())
     .optional()
@@ -138,7 +171,10 @@ export const createCardServerSchema = z.object({
   description: z.string().optional(),
   columnId: z.string().min(1, "Column ID is required"),
   priority: z.enum(["low", "medium", "high"]).nullable().optional(),
-  status: z.enum(["backlog", "todo", "in_progress", "review", "done"]).nullable().optional(),
+  status: z
+    .enum(["backlog", "todo", "in_progress", "review", "done"])
+    .nullable()
+    .optional(),
   tags: z.array(z.string()).nullable().optional(),
 });
 
@@ -147,7 +183,10 @@ export const updateCardServerSchema = z.object({
   title: z.string().min(1, "Title is required").optional(),
   description: z.string().optional(),
   priority: z.enum(["low", "medium", "high"]).nullable().optional(),
-  status: z.enum(["backlog", "todo", "in_progress", "review", "done"]).nullable().optional(),
+  status: z
+    .enum(["backlog", "todo", "in_progress", "review", "done"])
+    .nullable()
+    .optional(),
   tags: z.array(z.string()).nullable().optional(),
 });
 

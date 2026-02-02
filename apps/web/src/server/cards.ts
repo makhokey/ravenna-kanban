@@ -173,10 +173,7 @@ export const deleteCard = createServerFn({ method: "POST" })
     const [card] = await db.select().from(cards).where(eq(cards.id, data.id));
 
     // Soft delete: set deletedAt timestamp instead of removing
-    await db
-      .update(cards)
-      .set({ deletedAt: new Date() })
-      .where(eq(cards.id, data.id));
+    await db.update(cards).set({ deletedAt: new Date() }).where(eq(cards.id, data.id));
 
     // Invalidate cache
     if (card) {

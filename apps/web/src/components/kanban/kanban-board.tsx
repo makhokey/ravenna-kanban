@@ -189,7 +189,7 @@ export function Board() {
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="flex h-full gap-3 overflow-x-auto overscroll-x-contain p-4 [-webkit-overflow-scrolling:touch]">
+      <div className="flex h-full gap-2 overflow-x-auto overscroll-x-contain p-3 [-webkit-overflow-scrolling:touch]">
         {board.columnIds.map((id) => (
           <Column
             key={id}

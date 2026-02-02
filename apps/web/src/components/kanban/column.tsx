@@ -76,12 +76,12 @@ export function Column({ column, cardIds, cardsById }: ColumnProps) {
   return (
     <div
       className={cn(
-        "bg-accent flex h-full w-82 flex-shrink-0 px-2 flex-col rounded-lg",
-        isDropTarget && "bg-primary",
+        "bg-card flex h-full w-82 flex-shrink-0 flex-col rounded-lg px-2",
+        isDropTarget && "bg-accent",
       )}
     >
       {/* Column Header */}
-      <div className="flex items-center justify-between gap-2 p-3">
+      <div className="flex items-center justify-between gap-2 p-2">
         <div className="flex items-center gap-2">
           {columnStatus && <StatusIcon status={columnStatus} size={16} />}
           <p className="text-sm font-medium">{column.name}</p>
@@ -99,7 +99,7 @@ export function Column({ column, cardIds, cardsById }: ColumnProps) {
       </div>
 
       {/* Cards */}
-      <div className="group/column flex flex-1 flex-col gap-2 overflow-y-auto p-2 pt-0">
+      <div className="group/column flex flex-1 flex-col gap-2 overflow-y-auto pt-0">
         <SortableContext items={filteredCardIds} strategy={verticalListSortingStrategy}>
           {filteredCardIds.map((id, idx) => {
             const card = cardsById[id];

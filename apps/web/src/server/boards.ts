@@ -118,4 +118,3 @@ export const createDefaultBoard = createServerFn().handler(async () => {
 
   return { id: boardId };
 });
-

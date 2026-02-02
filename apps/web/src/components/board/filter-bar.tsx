@@ -89,7 +89,12 @@ export function FilterBar() {
 
       {/* Clear Filters */}
       {hasFilters && (
-        <Button variant="ghost" size="sm" onClick={clearFilters} className="h-7 px-2 text-xs">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={clearFilters}
+          className="h-7 px-2 text-xs"
+        >
           <X className="mr-1 size-3" />
           Clear
         </Button>
