@@ -35,6 +35,7 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "sonner": "catalog:",
+    "uuid": "^13.0.0",
     "vite": "catalog:",
     "zod": "catalog:"
   },
@@ -47,6 +48,7 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "@types/uuid": "^11.0.0",
     "babel-plugin-react-compiler": "catalog:",
     "eslint": "catalog:",
     "prettier": "catalog:",

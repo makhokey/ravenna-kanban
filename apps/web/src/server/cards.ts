@@ -2,6 +2,7 @@ import { cards, columns } from "@repo/db/schema";
 import { createServerFn } from "@tanstack/react-start";
 import { and, eq, isNull } from "drizzle-orm";
 import { generateKeyBetween } from "fractional-indexing";
+import { v4 as uuidv4 } from "uuid";
 import {
   createCardServerSchema,
   updateCardServerSchema,
@@ -41,7 +42,7 @@ export const createCard = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }) => {
     const db = getDb();
-    const id = crypto.randomUUID();
+    const id = uuidv4();
     const now = new Date();
 
     // Get column to find boardId for cache invalidation

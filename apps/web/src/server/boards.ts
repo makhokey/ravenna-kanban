@@ -2,6 +2,7 @@ import { boards, cards, columns } from "@repo/db/schema";
 import type { Board, Card, Column } from "@repo/db/types";
 import { createServerFn } from "@tanstack/react-start";
 import { eq, isNull } from "drizzle-orm";
+import { v4 as uuidv4 } from "uuid";
 import { getDb } from "~/lib/db";
 import { cacheKeys, getCached, invalidateBoardCache } from "./cache";
 
@@ -92,7 +93,7 @@ export const getFirstBoard = createServerFn().handler(async () => {
 // Create default board (for initial setup)
 export const createDefaultBoard = createServerFn().handler(async () => {
   const db = getDb();
-  const boardId = crypto.randomUUID();
+  const boardId = uuidv4();
   const now = new Date();
 
   await db.insert(boards).values({
@@ -106,7 +107,7 @@ export const createDefaultBoard = createServerFn().handler(async () => {
   const defaultColumns = ["To Do", "In Progress", "Done"];
   for (let i = 0; i < defaultColumns.length; i++) {
     await db.insert(columns).values({
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       name: defaultColumns[i]!,
       position: i,
       boardId,
@@ -123,7 +124,7 @@ export const createColumn = createServerFn({ method: "POST" })
   .inputValidator((data: { boardId: string; name: string }) => data)
   .handler(async ({ data }) => {
     const db = getDb();
-    const id = crypto.randomUUID();
+    const id = uuidv4();
     const now = new Date();
 
     // Get max position in board

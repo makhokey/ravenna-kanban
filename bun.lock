@@ -34,6 +34,7 @@
         "react": "catalog:",
         "react-dom": "catalog:",
         "sonner": "catalog:",
+        "uuid": "^13.0.0",
         "vite": "catalog:",
         "zod": "catalog:",
       },
@@ -46,6 +47,7 @@
         "@types/node": "catalog:",
         "@types/react": "catalog:",
         "@types/react-dom": "catalog:",
+        "@types/uuid": "^11.0.0",
         "babel-plugin-react-compiler": "catalog:",
         "eslint": "catalog:",
         "prettier": "catalog:",
@@ -670,6 +672,8 @@
     "@types/react-dom": ["@types/react-dom@19.2.3", "", { "peerDependencies": { "@types/react": "^19.2.0" } }, "sha512-jp2L/eY6fn+KgVVQAOqYItbF0VY/YApe5Mz2F0aykSO8gx31bYCZyvSeYxCHKvzHG5eZjc+zyaS5BrBWya2+kQ=="],
 
     "@types/statuses": ["@types/statuses@2.0.6", "", {}, "sha512-xMAgYwceFhRA2zY+XbEA7mxYbA093wdiW8Vu6gZPGWy9cmOyU9XesH1tNcEWsKFd5Vzrqx5T3D38PWx1FIIXkA=="],
+
+    "@types/uuid": ["@types/uuid@11.0.0", "", { "dependencies": { "uuid": "*" } }, "sha512-HVyk8nj2m+jcFRNazzqyVKiZezyhDKrGUA3jlEcg/nZ6Ms+qHwocba1Y/AaVaznJTAM9xpdFSh+ptbNrhOGvZA=="],
 
     "@types/validate-npm-package-name": ["@types/validate-npm-package-name@4.0.2", "", {}, "sha512-lrpDziQipxCEeK5kWxvljWYhUvOiB2A9izZd9B2AFarYAkqZshb4lPbRs7zKEic6eGtH8V/2qJW+dPp9OtF6bw=="],
 
@@ -1504,6 +1508,8 @@
     "use-sync-external-store": ["use-sync-external-store@1.6.0", "", { "peerDependencies": { "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0" } }, "sha512-Pp6GSwGP/NrPIrxVFAIkOQeyw8lFenOHijQWkUTrDvrF4ALqylP2C/KCkeS9dpUM3KvYRQhna5vt7IL95+ZQ9w=="],
 
     "util-deprecate": ["util-deprecate@1.0.2", "", {}, "sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw=="],
+
+    "uuid": ["uuid@13.0.0", "", { "bin": { "uuid": "dist-node/bin/uuid" } }, "sha512-XQegIaBTVUjSHliKqcnFqYypAd4S+WCYt5NIeRs6w/UAry7z8Y9j5ZwRRL4kzq9U3sD6v+85er9FvkEaBpji2w=="],
 
     "validate-npm-package-name": ["validate-npm-package-name@7.0.2", "", {}, "sha512-hVDIBwsRruT73PbK7uP5ebUt+ezEtCmzZz3F59BSr2F6OVFnJ/6h8liuvdLrQ88Xmnk6/+xGGuq+pG9WwTuy3A=="],
 
