@@ -4,7 +4,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { eq, isNull } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { getDb } from "~/lib/db";
-import { cacheKeys, getCached, invalidateBoardCache } from "./cache";
+import { cacheKeys, getCached } from "./cache";
 
 import type { CardData, ColumnData, NormalizedBoard } from "~/types/board";
 
@@ -119,81 +119,3 @@ export const createDefaultBoard = createServerFn().handler(async () => {
   return { id: boardId };
 });
 
-// Create column
-export const createColumn = createServerFn({ method: "POST" })
-  .inputValidator((data: { boardId: string; name: string }) => data)
-  .handler(async ({ data }) => {
-    const db = getDb();
-    const id = uuidv4();
-    const now = new Date();
-
-    // Get max position in board
-    const existingColumns = await db
-      .select()
-      .from(columns)
-      .where(eq(columns.boardId, data.boardId));
-
-    const maxPosition = existingColumns.reduce(
-      (max, col) => Math.max(max, col.position),
-      -1,
-    );
-
-    await db.insert(columns).values({
-      id,
-      name: data.name,
-      position: maxPosition + 1,
-      boardId: data.boardId,
-      createdAt: now,
-      updatedAt: now,
-    });
-
-    // Invalidate cache
-    await invalidateBoardCache(data.boardId);
-
-    return { id };
-  });
-
-// Update column
-export const updateColumn = createServerFn({ method: "POST" })
-  .inputValidator((data: { id: string; name?: string }) => data)
-  .handler(async ({ data }) => {
-    const db = getDb();
-    const { id, ...updates } = data;
-
-    // Get column to find boardId for cache invalidation
-    const [column] = await db.select().from(columns).where(eq(columns.id, id));
-
-    await db
-      .update(columns)
-      .set({
-        ...updates,
-        updatedAt: new Date(),
-      })
-      .where(eq(columns.id, id));
-
-    // Invalidate cache
-    if (column) {
-      await invalidateBoardCache(column.boardId);
-    }
-
-    return { success: true };
-  });
-
-// Delete column
-export const deleteColumn = createServerFn({ method: "POST" })
-  .inputValidator((data: { id: string }) => data)
-  .handler(async ({ data }) => {
-    const db = getDb();
-
-    // Get column to find boardId for cache invalidation
-    const [column] = await db.select().from(columns).where(eq(columns.id, data.id));
-
-    await db.delete(columns).where(eq(columns.id, data.id));
-
-    // Invalidate cache
-    if (column) {
-      await invalidateBoardCache(column.boardId);
-    }
-
-    return { success: true };
-  });
