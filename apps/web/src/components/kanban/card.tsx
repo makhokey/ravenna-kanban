@@ -1,21 +1,10 @@
 import type { DraggableSyntheticListeners } from "@dnd-kit/core";
 import type { Transform } from "@dnd-kit/utilities";
-import {
-  AlertDialog,
-  AlertDialogClose,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogPopup,
-  AlertDialogTitle,
-} from "@repo/ui/components/alert-dialog";
 import { Badge } from "@repo/ui/components/badge";
-import { Button } from "@repo/ui/components/button";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "@repo/ui/components/tooltip";
 import { cn } from "@repo/ui/lib/utils";
 import { useAtom } from "jotai";
-import { Trash2 } from "lucide-react";
-import { type CSSProperties, memo, type Ref, useMemo, useState } from "react";
+import { type CSSProperties, memo, type Ref, useMemo } from "react";
 import {
   getSelectedTags,
   safeParseJsonTags,
@@ -30,7 +19,6 @@ import type { CardData } from "~/types/board";
 
 export interface CardProps {
   card: CardData;
-  onDelete?: (id: string) => void;
   // Drag state props (following dnd-kit Item pattern)
   dragOverlay?: boolean;
   dragging?: boolean;
@@ -44,7 +32,6 @@ export interface CardProps {
 
 function CardComponent({
   card,
-  onDelete,
   dragOverlay,
   dragging,
   fadeIn,
@@ -56,7 +43,6 @@ function CardComponent({
 }: CardProps) {
   const [panel, setPanel] = useAtom(panelAtom);
   const updateCard = useUpdateCard();
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const isSelected = panel.open && panel.cardId === card.id;
 
@@ -95,7 +81,7 @@ function CardComponent({
     <div
       ref={ref}
       className={cn(
-        "bg-card text-card-foreground group relative mx-2 mb-2 flex h-32 cursor-pointer flex-col gap-2 overflow-hidden rounded-lg border p-3 select-none",
+        "bg-card text-card-foreground group relative mb-2 flex h-32 mx-2.5 cursor-pointer flex-col gap-2 overflow-hidden rounded-lg border p-3 select-none",
         // Hide original when dragging (not the overlay)
         dragging && !dragOverlay && "opacity-0",
         // Drag overlay styling
@@ -177,17 +163,6 @@ function CardComponent({
           className="flex items-center gap-1"
           onPointerDown={(e) => e.stopPropagation()}
         >
-          {onDelete && (
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100"
-              onClick={() => setDeleteDialogOpen(true)}
-              aria-label="Delete card"
-            >
-              <Trash2 className="size-3.5" />
-            </Button>
-          )}
           <PrioritySelect
             value={(card.priority as PriorityValue) ?? "no priority"}
             onChange={handlePriorityChange}
@@ -195,33 +170,6 @@ function CardComponent({
           />
         </div>
       </footer>
-
-      {/* Delete confirmation dialog */}
-      {onDelete && (
-        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogPopup onPointerDown={(e) => e.stopPropagation()}>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete card</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to delete "{card.title}"? This action cannot be
-                undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogClose render={<Button variant="outline">Cancel</Button>} />
-              <Button
-                variant="destructive"
-                onClick={() => {
-                  onDelete(card.id);
-                  setDeleteDialogOpen(false);
-                }}
-              >
-                Delete
-              </Button>
-            </AlertDialogFooter>
-          </AlertDialogPopup>
-        </AlertDialog>
-      )}
     </div>
   );
 }

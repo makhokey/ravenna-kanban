@@ -205,9 +205,13 @@ export function Kanban() {
         ))}
       </div>
 
-         <DragOverlay dropAnimation={{ duration: 250, easing: "ease" }}>
-      {activeCard && <Card card={activeCard} dragOverlay dragging />}
-    </DragOverlay>
+      <DragOverlay dropAnimation={{ duration: 250, easing: "ease" }}>
+        {activeCard && (
+          <div className="w-92">
+            <Card card={activeCard} dragOverlay dragging />
+          </div>
+        )}
+      </DragOverlay>
     </DndContext>
   );
 }

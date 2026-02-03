@@ -3,10 +3,9 @@ import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
 import { useAtomValue, useSetAtom } from "jotai";
 import { Plus } from "lucide-react";
-import { useCallback, useMemo } from "react";
+import { useMemo } from "react";
 import { getColumnStatus } from "~/components/shared/card-schema";
 import { StatusIcon } from "~/components/shared/status-icon";
-import { useDeleteCard } from "~/hooks/use-cards";
 import { useFilteredCardIds } from "~/hooks/use-filtered-cards";
 import {
   activeColumnIdAtom,
@@ -53,25 +52,18 @@ export function Column({ column, cardIds, cardsById }: ColumnProps) {
     tagFilters,
   );
 
-  const deleteCard = useDeleteCard();
-
-  const handleDeleteCard = useCallback(
-    (cardId: string) => deleteCard.mutate({ id: cardId }),
-    [deleteCard],
-  );
-
   return (
     <div
       ref={setDroppableRef}
       className={cn(
-        "flex h-full w-92 shrink-0 flex-col border-x border-transparent py-2 ",
+        "flex h-full w-92 shrink-0 flex-col border-x border-transparent pt-2 ",
         isOver && "border-dashed border-primary duration-300 ease-in-out",
       )}
     >
       {/* Column Header */}
-      <div className="flex items-center justify-between px-4 pb-2">
+      <div className="flex items-center justify-between px-4">
         <div className="flex items-center gap-2">
-          {columnStatus && <StatusIcon status={columnStatus} size={12} />}
+          {columnStatus && <StatusIcon status={columnStatus} />}
           <p className="text-sm font-medium">{column.name}</p>
           <span className="text-muted-foreground text-xs">{filteredCardIds.length}</span>
         </div>
@@ -87,11 +79,7 @@ export function Column({ column, cardIds, cardsById }: ColumnProps) {
       </div>
 
       <div className="group/column flex flex-1 flex-col overflow-hidden">
-        <VirtualizedCardList
-          cardIds={filteredCardIds}
-          cardsById={cardsById}
-          onDelete={handleDeleteCard}
-        />
+        <VirtualizedCardList cardIds={filteredCardIds} cardsById={cardsById} />
       </div>
     </div>
   );

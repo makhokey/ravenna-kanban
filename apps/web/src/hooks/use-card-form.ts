@@ -1,6 +1,7 @@
 import { toastManager } from "@repo/ui/components/toast";
 import { useForm } from "@tanstack/react-form-start";
 import { useCallback, useEffect, useRef } from "react";
+import { useDebouncedCallback } from "use-debounce";
 import {
   cardFormSchema,
   getColumnStatus,
@@ -172,6 +173,24 @@ export function useCardForm({
     [autoSave, editorState, updateCard],
   );
 
+  // Debounced title save - compares with existingCard directly
+  const handleTitleChange = useDebouncedCallback((value: string) => {
+    if (!autoSave || editorState.mode !== "edit" || !editorState.cardId) return;
+    const trimmed = value.trim();
+    if (trimmed && trimmed !== existingCard?.title) {
+      updateCard.mutate({ id: editorState.cardId, title: trimmed });
+    }
+  }, 500);
+
+  // Debounced description save
+  const handleDescriptionChange = useDebouncedCallback((value: string) => {
+    if (!autoSave || editorState.mode !== "edit" || !editorState.cardId) return;
+    const trimmed = value.trimEnd();
+    if (trimmed !== (existingCard?.description ?? "")) {
+      updateCard.mutate({ id: editorState.cardId, description: trimmed || null });
+    }
+  }, 500);
+
   return {
     form,
     isPending,
@@ -182,5 +201,7 @@ export function useCardForm({
     handleStatusChange,
     handlePriorityChange,
     handleTagsChange,
+    handleTitleChange,
+    handleDescriptionChange,
   };
 }

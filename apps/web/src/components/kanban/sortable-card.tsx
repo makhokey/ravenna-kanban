@@ -10,7 +10,6 @@ import { Card } from "./card";
 
 interface SortableCardProps {
   card: CardData;
-  onDelete?: (id: string) => void;
 }
 
 // Enable smooth animations when items are reordered, including after drag ends
@@ -29,7 +28,7 @@ function useMountStatus() {
   return isMounted;
 }
 
-export function SortableCard({ card, onDelete }: SortableCardProps) {
+export function SortableCard({ card }: SortableCardProps) {
   const { setNodeRef, listeners, attributes, isDragging, transform, transition } =
     useSortable({
       id: card.id,
@@ -44,7 +43,6 @@ export function SortableCard({ card, onDelete }: SortableCardProps) {
     <Card
       ref={setNodeRef}
       card={card}
-      onDelete={onDelete}
       dragging={isDragging}
       fadeIn={mountedWhileDragging}
       transform={transform}

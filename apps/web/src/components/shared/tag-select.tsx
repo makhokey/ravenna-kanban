@@ -130,7 +130,7 @@ export function TagSelect({ value, onChange, iconOnly }: TagSelectProps) {
         <ComboboxList className="w-full">
           {(item: TagOption) => (
             <ComboboxItem className="w-full" key={item.value} value={item}>
-              <span className={`size-3 rounded-full ${item.color}`} />
+              <span className={`size-2.5 rounded-full ${item.color}`} />
               <span className="flex-1">{item.label}</span>
               <ComboboxItemIndicator />
               <Kbd>{item.shortcut}</Kbd>

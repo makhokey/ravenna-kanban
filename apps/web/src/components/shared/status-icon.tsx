@@ -25,7 +25,7 @@ const statusProgress: Record<StatusValue, number> = {
   done: 100,
 };
 
-export function StatusIcon({ status, size = 16, className }: StatusIconProps) {
+export function StatusIcon({ status, size = 14, className }: StatusIconProps) {
   const center = size / 2;
   const strokeWidth = 2;
   const radius = (size - strokeWidth) / 2;

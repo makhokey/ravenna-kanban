@@ -9,14 +9,11 @@ import { SortableCard } from "./sortable-card";
 interface VirtualizedCardListProps {
   cardIds: string[];
   cardsById: Record<string, CardData>;
-  onDelete: (cardId: string) => void;
 }
-
 
 export function VirtualizedCardList({
   cardIds,
   cardsById,
-  onDelete,
 }: VirtualizedCardListProps) {
   // Subscribe directly to activeCardId - only re-renders when this changes
   const activeId = useAtomValue(activeCardIdAtom);
@@ -30,14 +27,14 @@ export function VirtualizedCardList({
   }, [cardIds, activeId]);
 
   return (
-    <div style={{ height: "100%" }}>
+    <div style={{ height: "100%" }} className="py-2">
       <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
         <VList ref={listRef} style={{ height: "100%" }} keepMounted={keepMounted}>
           {cardIds.map((id) => {
             const card = cardsById[id];
             if (!card) return null;
 
-            return <SortableCard key={id} card={card} onDelete={onDelete} />;
+            return <SortableCard key={id} card={card} />;
           })}
         </VList>
       </SortableContext>

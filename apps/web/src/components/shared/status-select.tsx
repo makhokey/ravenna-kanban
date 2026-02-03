@@ -47,11 +47,11 @@ export function StatusSelect({ value, onChange, iconOnly }: StatusSelectProps) {
               render={
                 iconOnly ? (
                   <Button variant="ghost" size="icon-xs">
-                    <StatusIcon status={selected.value} size={16} />
+                    <StatusIcon status={selected.value}  />
                   </Button>
                 ) : (
                   <Button variant="outline" size="xs" className="gap-2">
-                    <StatusIcon status={selected.value} size={16} />
+                    <StatusIcon status={selected.value}  />
                     <span>{selected.label}</span>
                   </Button>
                 )
@@ -85,7 +85,7 @@ export function StatusSelect({ value, onChange, iconOnly }: StatusSelectProps) {
         <ComboboxList className="w-full">
           {(item: StatusOption) => (
             <ComboboxItem className="w-full" key={item.value} value={item}>
-              <StatusIcon status={item.value} size={16} />
+              <StatusIcon status={item.value} className="size-3" />
               <span className="flex-1">{item.label}</span>
               <ComboboxItemIndicator />
               <Kbd>{item.shortcut}</Kbd>

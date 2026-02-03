@@ -76,7 +76,7 @@ export function CardDialog() {
             </form.Field>
           </DialogPanel>
 
-          <DialogFooter  className="flex items-center justify-between px-4 py-2">
+          <DialogFooter  className="flex items-center justify-between px-4 pb-4">
             <div className="flex w-full items-center gap-1">
               <form.Field name="status">
                 {(field) => (
@@ -129,7 +129,7 @@ export function CardDialog() {
                 }
               />
               <TooltipPopup>
-                {mode === "create" ? "Create" : "Save"}
+                {mode === "create" ? "Create " : "Save "} 
                 <KbdGroup>
                   <Kbd>⌘</Kbd>
                   <Kbd>↵</Kbd>

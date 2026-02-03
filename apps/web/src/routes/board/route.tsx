@@ -6,8 +6,8 @@ export const Route = createFileRoute("/board")({
 
 function BoardLayout() {
   return (
-    <div className="flex h-svh flex-col">
-      <main className="m-2 flex flex-1 flex-col overflow-hidden rounded-lg border">
+    <div className="flex p-2 h-svh flex-col overflow-hidden">
+      <main className="flex flex-1 flex-col overflow-hidden rounded border">
         <Outlet />
       </main>
     </div>

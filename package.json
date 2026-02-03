@@ -81,7 +81,6 @@
     "deploy": "bun run build && bunx wrangler deploy"
   },
   "devDependencies": {
-    "@types/react-window": "^2.0.0",
     "prettier": "catalog:",
     "prettier-plugin-organize-imports": "catalog:",
     "prettier-plugin-tailwindcss": "catalog:",
@@ -92,6 +91,6 @@
     "node": ">=22"
   },
   "dependencies": {
-    "react-window": "^2.2.6"
+    "use-debounce": "^10.1.0"
   }
 }
