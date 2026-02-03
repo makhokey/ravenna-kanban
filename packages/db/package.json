@@ -5,6 +5,8 @@
   "private": true,
   "scripts": {
     "db": "drizzle-kit",
+    "generate-seed": "bun run scripts/generate-seed.ts",
+    "seed:local": "cd ../../apps/web && wrangler d1 execute ravenna-kanban-db --file ../../packages/db/seed-200.sql --local",
     "lint": "eslint .",
     "check-types": "tsc --noEmit"
   },
@@ -14,7 +16,8 @@
     "./types": "./src/types/index.ts"
   },
   "dependencies": {
-    "drizzle-orm": "catalog:"
+    "drizzle-orm": "catalog:",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:",

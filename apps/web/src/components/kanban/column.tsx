@@ -1,4 +1,4 @@
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { useDroppable } from "@dnd-kit/core";
 import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
 import { useAtomValue, useSetAtom } from "jotai";
@@ -9,24 +9,26 @@ import { StatusIcon } from "~/components/shared/status-icon";
 import { useDeleteCard } from "~/hooks/use-cards";
 import { useFilteredCardIds } from "~/hooks/use-filtered-cards";
 import { dialogAtom, priorityFiltersAtom, tagFiltersAtom } from "~/stores/board";
-import { activeIdAtom, targetColumnIdAtom } from "~/stores/kanban-drag";
 import type { CardData, ColumnData } from "~/types/board";
-import { Card } from "./card";
+import { VirtualizedCardList } from "./virtualized-card-list";
 
 interface ColumnProps {
   column: ColumnData;
   cardIds: string[]; // Already sorted
   cardsById: Record<string, CardData>;
+  activeId: string | null; // Only set if this column contains the dragged card
 }
 
-export function Column({ column, cardIds, cardsById }: ColumnProps) {
+export function Column({ column, cardIds, cardsById, activeId }: ColumnProps) {
   const setDialog = useSetAtom(dialogAtom);
   const priorityFilters = useAtomValue(priorityFiltersAtom);
   const tagFilters = useAtomValue(tagFiltersAtom);
 
-  // Use granular selectors for drag state to minimize re-renders
-  const activeId = useAtomValue(activeIdAtom);
-  const targetColumnId = useAtomValue(targetColumnIdAtom);
+  // Make the column a droppable target for cross-column moves
+  const { setNodeRef: setDroppableRef } = useDroppable({
+    id: column.id,
+    data: { type: "column", columnId: column.id },
+  });
 
   // Get status icon for column header
   const columnStatus = useMemo(() => getColumnStatus(column.name), [column.name]);
@@ -39,9 +41,6 @@ export function Column({ column, cardIds, cardsById }: ColumnProps) {
     tagFilters,
   );
 
-  // Visual feedback state
-  const isDropTarget = activeId !== null && targetColumnId === column.id;
-
   const deleteCard = useDeleteCard();
 
   const handleDeleteCard = useCallback(
@@ -53,10 +52,8 @@ export function Column({ column, cardIds, cardsById }: ColumnProps) {
 
   return (
     <div
-      className={cn(
-        "bg-card flex h-full w-82 flex-shrink-0 flex-col rounded-lg px-2",
-        isDropTarget && "bg-accent",
-      )}
+      ref={setDroppableRef}
+      className={cn("bg-card flex h-full w-82 shrink-0 flex-col rounded-lg px-2")}
     >
       {/* Column Header */}
       <div className="flex items-center justify-between gap-2 p-2">
@@ -76,26 +73,23 @@ export function Column({ column, cardIds, cardsById }: ColumnProps) {
         </Button>
       </div>
 
-      {/* Cards */}
-      <div className="group/column flex flex-1 flex-col gap-2 overflow-y-auto pt-0">
-        <SortableContext items={filteredCardIds} strategy={verticalListSortingStrategy}>
-          {filteredCardIds.map((id) => {
-            const card = cardsById[id];
-            if (!card) return null;
-
-            return <Card key={id} card={card} onDelete={handleDeleteCard} />;
-          })}
-        </SortableContext>
+      <div className="group/column flex flex-1 flex-col overflow-hidden">
+        <VirtualizedCardList
+          cardIds={filteredCardIds}
+          cardsById={cardsById}
+          onDelete={handleDeleteCard}
+          activeId={activeId}
+        />
 
         {/* Add Card Button - visible on column hover */}
-        <Button
+        {/* <Button
           variant="ghost"
           size="sm"
-          className="opacity-0 transition-opacity group-hover/column:opacity-100"
+          className=" opacity-0 transition-opacity group-hover/column:opacity-100"
           onClick={() => setDialog({ open: true, mode: "create", columnId: column.id })}
         >
           <Plus />
-        </Button>
+        </Button> */}
       </div>
     </div>
   );

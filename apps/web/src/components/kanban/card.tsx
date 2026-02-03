@@ -83,7 +83,7 @@ function CardComponent({ card, onDelete, isDragOverlay }: CardProps) {
     <div
       ref={setNodeRef}
       className={cn(
-        "bg-card text-card-foreground group relative flex h-auto min-h-32 cursor-grab flex-col gap-2 overflow-hidden rounded-lg border p-3 select-none active:cursor-grabbing",
+        "bg-card text-card-foreground group relative mb-2 flex h-auto min-h-32 cursor-grab flex-col gap-2 overflow-hidden rounded-lg border p-3 select-none active:cursor-grabbing",
         isDragging && !isDragOverlay && "opacity-50",
         isSelected && "border-primary",
       )}

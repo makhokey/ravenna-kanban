@@ -36,6 +36,7 @@
     "react-dom": "catalog:",
     "sonner": "catalog:",
     "uuid": "^13.0.0",
+    "virtua": "^0.48.5",
     "vite": "catalog:",
     "zod": "catalog:"
   },

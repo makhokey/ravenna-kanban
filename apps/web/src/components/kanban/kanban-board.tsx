@@ -1,15 +1,17 @@
 import {
   closestCenter,
+  type CollisionDetection,
   defaultDropAnimationSideEffects,
   DndContext,
   type DragEndEvent,
-  type DragOverEvent,
   DragOverlay,
   type DragStartEvent,
   type DropAnimation,
   KeyboardSensor,
   MeasuringStrategy,
   PointerSensor,
+  pointerWithin,
+  rectIntersection,
   TouchSensor,
   useSensor,
   useSensors,
@@ -18,6 +20,7 @@ import { restrictToWindowEdges } from "@dnd-kit/modifiers";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { useSetAtom } from "jotai";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useBoard } from "~/hooks/use-board";
 import { useMoveCard } from "~/hooks/use-cards";
 import { calculateDropPosition, computeOptimisticCardOrder } from "~/lib/dnd-position";
@@ -39,6 +42,45 @@ const dropAnimationConfig: DropAnimation = {
       },
     },
   }),
+};
+
+// Custom collision detection optimized for kanban columns
+// Handles: empty column drops, cross-column card snapping
+const collisionDetection: CollisionDetection = (args) => {
+  // First: check if pointer is directly inside a droppable (column or card)
+  const pointerCollisions = pointerWithin(args);
+  if (pointerCollisions.length > 0) {
+    // If pointer is in a column, find the closest card within
+    const columnCollision = pointerCollisions.find(
+      (c) => (c.data?.current as { type?: string })?.type === "column",
+    );
+    if (columnCollision) {
+      // Get cards within this column and find closest
+      const cardsInColumn = args.droppableContainers.filter(
+        (c) =>
+          (c.data?.current as { card?: CardData })?.card?.columnId === columnCollision.id,
+      );
+      if (cardsInColumn.length > 0) {
+        const closest = closestCenter({
+          ...args,
+          droppableContainers: cardsInColumn,
+        });
+        if (closest.length > 0) return closest;
+      }
+      // Empty column - return the column itself
+      return [columnCollision];
+    }
+    return pointerCollisions;
+  }
+
+  // Second: check rect intersection (dragged item overlaps droppable)
+  const rectCollisions = rectIntersection(args);
+  if (rectCollisions.length > 0) {
+    return rectCollisions;
+  }
+
+  // Fallback: closest center
+  return closestCenter(args);
 };
 
 function getTargetColumnId(over: {
@@ -63,14 +105,10 @@ export function Board() {
   const [tempCardOrder, setTempCardOrder] = useState<TempCardOrder>(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
+    useSensor(PointerSensor),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 250,
+        delay: 200,
         tolerance: 5,
       },
     }),
@@ -92,10 +130,7 @@ export function Board() {
   const handleDragStart = (event: DragStartEvent) => {
     if (!isCardDragData(event.active.data.current)) return;
     setActiveCard(event.active.data.current.card);
-    setDragState({
-      activeId: event.active.id as string,
-      targetColumnId: null,
-    });
+    setDragState({ activeId: event.active.id as string });
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -158,17 +193,6 @@ export function Board() {
     }
   };
 
-  const handleDragOver = (event: DragOverEvent) => {
-    const { over } = event;
-    if (!over || !board) {
-      setDragState((prev) => ({ ...prev, targetColumnId: null }));
-      return;
-    }
-
-    const targetColumnId = getTargetColumnId(over);
-    setDragState((prev) => ({ ...prev, targetColumnId }));
-  };
-
   const handleDragCancel = () => {
     setDragState(INITIAL_DRAG_STATE);
     setActiveCard(null);
@@ -176,15 +200,15 @@ export function Board() {
 
   return (
     <DndContext
+      autoScroll={{ threshold: { x: 0.2, y: 0 }, acceleration: 5 }}
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={collisionDetection}
       measuring={{
         droppable: {
           strategy: MeasuringStrategy.Always,
         },
       }}
       onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
@@ -195,16 +219,20 @@ export function Board() {
             column={board.columnsById[id]!}
             cardIds={tempCardOrder?.[id] ?? board.cardIdsByColumn[id] ?? []}
             cardsById={board.cardsById}
+            activeId={id === activeCard?.columnId ? activeCard.id : null}
           />
         ))}
       </div>
 
-      <DragOverlay
-        modifiers={[restrictToWindowEdges]}
-        dropAnimation={dropAnimationConfig}
-      >
-        {activeCard && <Card card={activeCard} isDragOverlay />}
-      </DragOverlay>
+      {createPortal(
+        <DragOverlay
+          modifiers={[restrictToWindowEdges]}
+          dropAnimation={dropAnimationConfig}
+        >
+          {activeCard && <Card card={activeCard} isDragOverlay />}
+        </DragOverlay>,
+        document.body,
+      )}
     </DndContext>
   );
 }

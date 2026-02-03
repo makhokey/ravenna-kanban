@@ -63,7 +63,10 @@ export const createCard = createServerFn({ method: "POST" })
     const now = new Date();
 
     // Get and increment sequence for displayId
-    const [sequence] = await db.select().from(sequences).where(eq(sequences.name, "card"));
+    const [sequence] = await db
+      .select()
+      .from(sequences)
+      .where(eq(sequences.name, "card"));
     const nextNumber = sequence?.nextId ?? 1;
     const displayId = `RAV-${nextNumber}`;
 
