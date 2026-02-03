@@ -16,10 +16,9 @@ interface ColumnProps {
   column: ColumnData;
   cardIds: string[]; // Already sorted
   cardsById: Record<string, CardData>;
-  activeId: string | null; // Only set if this column contains the dragged card
 }
 
-export function Column({ column, cardIds, cardsById, activeId }: ColumnProps) {
+export function Column({ column, cardIds, cardsById }: ColumnProps) {
   const setDialog = useSetAtom(dialogAtom);
   const priorityFilters = useAtomValue(priorityFiltersAtom);
   const tagFilters = useAtomValue(tagFiltersAtom);
@@ -78,7 +77,6 @@ export function Column({ column, cardIds, cardsById, activeId }: ColumnProps) {
           cardIds={filteredCardIds}
           cardsById={cardsById}
           onDelete={handleDeleteCard}
-          activeId={activeId}
         />
 
         {/* Add Card Button - visible on column hover */}

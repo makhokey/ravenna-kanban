@@ -1,14 +1,15 @@
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { useAtomValue } from "jotai";
 import { useEffect, useMemo, useRef } from "react";
 import { VList, type VListHandle } from "virtua";
+import { activeCardIdAtom } from "~/stores/kanban-drag";
 import type { CardData } from "~/types/board";
-import { Card } from "./card";
+import { SortableCard } from "./sortable-card";
 
 interface VirtualizedCardListProps {
   cardIds: string[];
   cardsById: Record<string, CardData>;
   onDelete: (cardId: string) => void;
-  activeId: string | null;
 }
 
 const SCROLL_THRESHOLD = 80; // px from edge to trigger scroll
@@ -18,8 +19,10 @@ export function VirtualizedCardList({
   cardIds,
   cardsById,
   onDelete,
-  activeId,
 }: VirtualizedCardListProps) {
+  // Subscribe directly to activeCardId - only re-renders when this changes
+  const activeId = useAtomValue(activeCardIdAtom);
+
   const listRef = useRef<VListHandle>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -84,7 +87,7 @@ export function VirtualizedCardList({
             const card = cardsById[id];
             if (!card) return null;
 
-            return <Card key={id} card={card} onDelete={onDelete} />;
+            return <SortableCard key={id} card={card} onDelete={onDelete} />;
           })}
         </VList>
       </SortableContext>

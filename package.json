@@ -66,6 +66,7 @@
   },
   "scripts": {
     "build": "turbo run build",
+    "preview": "bun --filter=@repo/web preview",
     "dev": "turbo run dev --parallel",
     "dev:web": "turbo run dev --filter=@repo/web",
     "lint": "turbo run lint",

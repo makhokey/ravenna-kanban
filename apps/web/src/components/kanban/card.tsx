@@ -1,9 +1,5 @@
-import {
-  defaultAnimateLayoutChanges,
-  useSortable,
-  type AnimateLayoutChanges,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import type { DraggableSyntheticListeners } from "@dnd-kit/core";
+import type { Transform } from "@dnd-kit/utilities";
 import {
   AlertDialog,
   AlertDialogClose,
@@ -17,7 +13,7 @@ import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
 import { useAtom } from "jotai";
-import { memo, useMemo, useState } from "react";
+import { type CSSProperties, memo, type Ref, useMemo, useState } from "react";
 import {
   getSelectedTags,
   safeParseJsonTags,
@@ -29,31 +25,38 @@ import { StatusSelect } from "~/components/shared/status-select";
 import { useUpdateCard } from "~/hooks/use-cards";
 import { panelAtom } from "~/stores/board";
 import type { CardData } from "~/types/board";
-import type { CardDragData } from "~/types/dnd";
 
-interface CardProps {
+export interface CardProps {
   card: CardData;
   onDelete?: (id: string) => void;
-  isDragOverlay?: boolean;
+  // Drag state props (following dnd-kit Item pattern)
+  dragOverlay?: boolean;
+  dragging?: boolean;
+  fadeIn?: boolean;
+  transform?: Transform | null;
+  transition?: string | null;
+  listeners?: DraggableSyntheticListeners;
+  attributes?: React.HTMLAttributes<HTMLDivElement>;
+  ref?: Ref<HTMLDivElement>;
 }
 
-// Enable smooth animations when items are reordered, including after drag ends
-const animateLayoutChanges: AnimateLayoutChanges = (args) =>
-  defaultAnimateLayoutChanges({ ...args, wasDragging: true });
-
-function CardComponent({ card, onDelete, isDragOverlay }: CardProps) {
+function CardComponent({
+  card,
+  onDelete,
+  dragOverlay,
+  dragging,
+  fadeIn,
+  transform,
+  transition,
+  listeners,
+  attributes,
+  ref,
+}: CardProps) {
   const [panel, setPanel] = useAtom(panelAtom);
   const updateCard = useUpdateCard();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const isSelected = panel.open && panel.cardId === card.id;
-
-  const { attributes, listeners, setNodeRef, isDragging, transform, transition } =
-    useSortable({
-      id: card.id,
-      data: { type: "card", card } satisfies CardDragData,
-      animateLayoutChanges,
-    });
 
   const tags = useMemo(() => safeParseJsonTags(card.tags), [card.tags]);
   const selectedTags = useMemo(() => getSelectedTags(tags), [tags]);
@@ -79,18 +82,27 @@ function CardComponent({ card, onDelete, isDragOverlay }: CardProps) {
     });
   };
 
+  const style: CSSProperties = {
+    transform: transform
+      ? `translate3d(${Math.round(transform.x)}px, ${Math.round(transform.y)}px, 0) scaleX(${transform.scaleX ?? 1}) scaleY(${transform.scaleY ?? 1})`
+      : undefined,
+    transition: transition ?? undefined,
+  };
+
   return (
     <div
-      ref={setNodeRef}
+      ref={ref}
       className={cn(
         "bg-card text-card-foreground group relative mb-2 flex h-auto min-h-32 cursor-grab flex-col gap-2 overflow-hidden rounded-lg border p-3 select-none active:cursor-grabbing",
-        isDragging && !isDragOverlay && "opacity-50",
+        // Hide original when dragging (not the overlay)
+        dragging && !dragOverlay && "opacity-0",
+        // Drag overlay styling
+        dragOverlay && "cursor-grabbing shadow-xl shadow-black/25",
+        // Fade-in animation for items mounted during drag
+        fadeIn && "animate-fadeIn",
         isSelected && "border-primary",
       )}
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
-      }}
+      style={style}
       {...attributes}
       {...listeners}
       onDoubleClick={() => {
@@ -183,18 +195,4 @@ function CardComponent({ card, onDelete, isDragOverlay }: CardProps) {
   );
 }
 
-export const Card = memo(CardComponent, (prev, next) => {
-  return (
-    prev.card.id === next.card.id &&
-    prev.card.displayId === next.card.displayId &&
-    prev.card.updatedAt === next.card.updatedAt &&
-    prev.card.title === next.card.title &&
-    prev.card.description === next.card.description &&
-    prev.card.priority === next.card.priority &&
-    prev.card.status === next.card.status &&
-    prev.card.tags === next.card.tags &&
-    prev.card.columnId === next.card.columnId &&
-    prev.isDragOverlay === next.isDragOverlay &&
-    prev.onDelete === next.onDelete
-  );
-});
+export const Card = memo(CardComponent);

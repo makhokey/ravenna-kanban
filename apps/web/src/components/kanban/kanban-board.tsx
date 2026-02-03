@@ -1,87 +1,19 @@
 import {
   closestCenter,
-  type CollisionDetection,
-  defaultDropAnimationSideEffects,
   DndContext,
   type DragEndEvent,
-  DragOverlay,
   type DragStartEvent,
-  type DropAnimation,
-  KeyboardSensor,
   MeasuringStrategy,
-  PointerSensor,
-  pointerWithin,
-  rectIntersection,
-  TouchSensor,
-  useSensor,
-  useSensors,
 } from "@dnd-kit/core";
-import { restrictToWindowEdges } from "@dnd-kit/modifiers";
-import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { useSetAtom } from "jotai";
-import { useState } from "react";
-import { createPortal } from "react-dom";
+import { useAtomValue, useSetAtom } from "jotai";
 import { useBoard } from "~/hooks/use-board";
 import { useMoveCard } from "~/hooks/use-cards";
 import { calculateDropPosition, computeOptimisticCardOrder } from "~/lib/dnd-position";
-import { dragStateAtom, INITIAL_DRAG_STATE } from "~/stores/kanban-drag";
+import { activeCardAtom, tempCardOrderAtom } from "~/stores/kanban-drag";
 import type { CardData } from "~/types/board";
 import { isCardDragData } from "~/types/dnd";
-import { Card } from "./card";
+import { CardDragOverlay } from "./card-drag-overlay";
 import { Column } from "./column";
-
-// Temporary state type for optimistic reordering during drag
-type TempCardOrder = Record<string, string[]> | null;
-
-// Configure smooth drop animation with opacity side effect
-const dropAnimationConfig: DropAnimation = {
-  sideEffects: defaultDropAnimationSideEffects({
-    styles: {
-      active: {
-        opacity: "0.5",
-      },
-    },
-  }),
-};
-
-// Custom collision detection optimized for kanban columns
-// Handles: empty column drops, cross-column card snapping
-const collisionDetection: CollisionDetection = (args) => {
-  // First: check if pointer is directly inside a droppable (column or card)
-  const pointerCollisions = pointerWithin(args);
-  if (pointerCollisions.length > 0) {
-    // If pointer is in a column, find the closest card within
-    const columnCollision = pointerCollisions.find(
-      (c) => (c.data?.current as { type?: string })?.type === "column",
-    );
-    if (columnCollision) {
-      // Get cards within this column and find closest
-      const cardsInColumn = args.droppableContainers.filter(
-        (c) =>
-          (c.data?.current as { card?: CardData })?.card?.columnId === columnCollision.id,
-      );
-      if (cardsInColumn.length > 0) {
-        const closest = closestCenter({
-          ...args,
-          droppableContainers: cardsInColumn,
-        });
-        if (closest.length > 0) return closest;
-      }
-      // Empty column - return the column itself
-      return [columnCollision];
-    }
-    return pointerCollisions;
-  }
-
-  // Second: check rect intersection (dragged item overlaps droppable)
-  const rectCollisions = rectIntersection(args);
-  if (rectCollisions.length > 0) {
-    return rectCollisions;
-  }
-
-  // Fallback: closest center
-  return closestCenter(args);
-};
 
 function getTargetColumnId(over: {
   id: string | number;
@@ -97,25 +29,13 @@ function getTargetColumnId(over: {
 
 export function Board() {
   const { data: board } = useBoard();
-  const setDragState = useSetAtom(dragStateAtom);
   const moveCard = useMoveCard();
 
-  const [activeCard, setActiveCard] = useState<CardData | null>(null);
-  // Temporary optimistic state to prevent flicker during drop animation
-  const [tempCardOrder, setTempCardOrder] = useState<TempCardOrder>(null);
+  const setActiveCard = useSetAtom(activeCardAtom);
+  const setTempCardOrder = useSetAtom(tempCardOrderAtom);
+  const tempCardOrder = useAtomValue(tempCardOrderAtom);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 200,
-        tolerance: 5,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  );
+ 
 
   if (!board) {
     return (
@@ -130,25 +50,19 @@ export function Board() {
   const handleDragStart = (event: DragStartEvent) => {
     if (!isCardDragData(event.active.data.current)) return;
     setActiveCard(event.active.data.current.card);
-    setDragState({ activeId: event.active.id as string });
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveCard(null);
 
-    // Delay dragState reset to let optimistic update process first
-    requestAnimationFrame(() => {
-      setDragState(INITIAL_DRAG_STATE);
-    });
-
     if (!over || !board || !isCardDragData(active.data.current)) return;
 
     const activeId = active.id as string;
     const overId = over.id as string;
 
-    const activeCard = board.cardsById[activeId];
-    if (!activeCard) return;
+    const draggedCard = board.cardsById[activeId];
+    if (!draggedCard) return;
 
     // Determine target column
     const overCard = over.data.current?.card as CardData | undefined;
@@ -165,12 +79,12 @@ export function Board() {
     );
 
     // Only mutate if something changed
-    if (activeCard.columnId !== targetColumnId || activeCard.position !== newPosition) {
+    if (draggedCard.columnId !== targetColumnId || draggedCard.position !== newPosition) {
       // Compute optimistic card order immediately to prevent flicker
       const newOrder = computeOptimisticCardOrder(
         board,
         activeId,
-        activeCard.columnId,
+        draggedCard.columnId,
         targetColumnId,
         insertIndex,
       );
@@ -194,18 +108,16 @@ export function Board() {
   };
 
   const handleDragCancel = () => {
-    setDragState(INITIAL_DRAG_STATE);
     setActiveCard(null);
+    setTempCardOrder(null);
   };
 
   return (
     <DndContext
-      autoScroll={{ threshold: { x: 0.2, y: 0 }, acceleration: 5 }}
-      sensors={sensors}
-      collisionDetection={collisionDetection}
+      collisionDetection={closestCenter}
       measuring={{
         droppable: {
-          strategy: MeasuringStrategy.Always,
+          strategy: MeasuringStrategy.WhileDragging,
         },
       }}
       onDragStart={handleDragStart}
@@ -219,20 +131,11 @@ export function Board() {
             column={board.columnsById[id]!}
             cardIds={tempCardOrder?.[id] ?? board.cardIdsByColumn[id] ?? []}
             cardsById={board.cardsById}
-            activeId={id === activeCard?.columnId ? activeCard.id : null}
           />
         ))}
       </div>
 
-      {createPortal(
-        <DragOverlay
-          modifiers={[restrictToWindowEdges]}
-          dropAnimation={dropAnimationConfig}
-        >
-          {activeCard && <Card card={activeCard} isDragOverlay />}
-        </DragOverlay>,
-        document.body,
-      )}
+      <CardDragOverlay />
     </DndContext>
   );
 }

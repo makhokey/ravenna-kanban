@@ -1,14 +1,8 @@
 import { atom } from "jotai";
+import type { CardData } from "~/types/board";
+export const activeCardAtom = atom<CardData | null>(null);
+export const tempCardOrderAtom = atom<Record<string, string[]> | null>(null);
 
-export type DragState = {
-  activeId: string | null;
-};
-
-export const INITIAL_DRAG_STATE: DragState = {
-  activeId: null,
-};
-
-export const dragStateAtom = atom<DragState>(INITIAL_DRAG_STATE);
-
-// Derived atom for granular subscriptions
-export const activeIdAtom = atom((get) => get(dragStateAtom).activeId);
+// Derived atoms for granular subscriptions
+export const activeCardIdAtom = atom((get) => get(activeCardAtom)?.id ?? null);
+export const activeColumnIdAtom = atom((get) => get(activeCardAtom)?.columnId ?? null);
