@@ -1,19 +1,25 @@
 import {
   closestCenter,
+  type CollisionDetection,
   DndContext,
   type DragEndEvent,
+  DragOverlay,
   type DragStartEvent,
+  getFirstCollision,
   MeasuringStrategy,
+  pointerWithin,
+  rectIntersection,
 } from "@dnd-kit/core";
 import { useAtomValue, useSetAtom } from "jotai";
+import { useCallback, useRef } from "react";
 import { useBoard } from "~/hooks/use-board";
 import { useMoveCard } from "~/hooks/use-cards";
 import { calculateDropPosition, computeOptimisticCardOrder } from "~/lib/dnd-position";
 import { activeCardAtom, tempCardOrderAtom } from "~/stores/kanban-drag";
 import type { CardData } from "~/types/board";
 import { isCardDragData } from "~/types/dnd";
-import { CardDragOverlay } from "./card-drag-overlay";
 import { Column } from "./column";
+import { Card } from "./card";
 
 function getTargetColumnId(over: {
   id: string | number;
@@ -34,8 +40,61 @@ export function Board() {
   const setActiveCard = useSetAtom(activeCardAtom);
   const setTempCardOrder = useSetAtom(tempCardOrderAtom);
   const tempCardOrder = useAtomValue(tempCardOrderAtom);
+  const activeCard = useAtomValue(activeCardAtom);
 
- 
+  // Ref for collision detection state - caches last over ID to prevent flickering
+  const lastOverIdRef = useRef<string | null>(null);
+
+  // Custom collision detection optimized for multiple containers
+  const collisionDetectionStrategy: CollisionDetection = useCallback(
+    (args) => {
+      // Start by finding any droppable intersecting with pointer
+      const pointerIntersections = pointerWithin(args);
+      const intersections =
+        pointerIntersections.length > 0 ? pointerIntersections : rectIntersection(args);
+
+      let overId = getFirstCollision(intersections, "id") as string | null;
+
+      if (overId != null) {
+        // If over a column, find the closest card within it
+        const columnCardIds = board?.cardIdsByColumn[overId];
+        if (columnCardIds && columnCardIds.length > 0) {
+          // Get card containers in this column
+          const cardContainers = args.droppableContainers.filter(
+            (container) =>
+              container.id !== overId && columnCardIds.includes(container.id as string),
+          );
+
+          // Check if pointer is below all cards in the column
+          const pointerY = args.pointerCoordinates?.y ?? 0;
+          const maxCardBottom = cardContainers.reduce((max, container) => {
+            const rect = container.rect.current;
+            if (!rect) return max;
+            return Math.max(max, rect.top + rect.height);
+          }, 0);
+
+          // If pointer is below all cards, keep column as target (drop at end)
+          if (pointerY > maxCardBottom) {
+            // Keep overId as the column
+          } else {
+            // Find closest card
+            overId =
+              (closestCenter({
+                ...args,
+                droppableContainers: cardContainers,
+              })[0]?.id as string | undefined) ?? overId;
+          }
+        }
+
+        lastOverIdRef.current = overId;
+        return [{ id: overId }];
+      }
+
+      // Return last match to prevent flickering
+      return lastOverIdRef.current ? [{ id: lastOverIdRef.current }] : [];
+    },
+    [board],
+  );
 
   if (!board) {
     return (
@@ -114,10 +173,10 @@ export function Board() {
 
   return (
     <DndContext
-      collisionDetection={closestCenter}
+      collisionDetection={collisionDetectionStrategy}
       measuring={{
         droppable: {
-          strategy: MeasuringStrategy.WhileDragging,
+          strategy: MeasuringStrategy.Always,
         },
       }}
       onDragStart={handleDragStart}
@@ -135,7 +194,9 @@ export function Board() {
         ))}
       </div>
 
-      <CardDragOverlay />
+         <DragOverlay dropAnimation={{ duration: 250, easing: "ease" }}>
+      {activeCard && <Card card={activeCard} dragOverlay dragging />}
+    </DragOverlay>
     </DndContext>
   );
 }
