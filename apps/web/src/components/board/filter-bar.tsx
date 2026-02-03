@@ -4,14 +4,15 @@ import { Popover, PopoverPopup, PopoverTrigger } from "@repo/ui/components/popov
 import { Toggle, ToggleGroup } from "@repo/ui/components/toggle-group";
 import { cn } from "@repo/ui/lib/utils";
 import { useAtom } from "jotai";
-import { LayoutGrid, List, SlidersHorizontalIcon, X } from "lucide-react";
+import { FilterIcon, LayoutGrid, List, SlidersHorizontalIcon, X } from "lucide-react";
 import { PRIORITY_OPTIONS, TAG_OPTIONS } from "~/components/shared/card-schema";
 import {
   priorityFiltersAtom,
   tagFiltersAtom,
   viewModeAtom,
   type ViewMode,
-} from "~/stores/board";
+} from "~/atoms/board";
+import { ThemeToggle } from "~/components/theme-toggle";
 
 export function FilterBar() {
   const [viewMode, setViewMode] = useAtom(viewModeAtom);
@@ -50,10 +51,18 @@ export function FilterBar() {
   const hasFilters = priorityFilters.size > 0 || tagFilters.size > 0;
 
   return (
-    <div className="flex flex-wrap items-center gap-4 border-b px-4 py-2">
-      {/* Priority Filters */}
-      <div className="flex items-center gap-1">
-        <span className="text-muted-foreground mr-1 text-sm">Priority:</span>
+    <div className="flex justify-between items-center gap-4 border-b px-4 py-1.5">
+      <Popover>
+        <PopoverTrigger
+          render={
+            <Button variant="outline" size="sm">
+              <FilterIcon className="size-3" />
+              Filters
+            </Button>
+          }
+        />
+        <PopoverPopup align="start" className="w-92 flex-col gap-2" >
+       Priority
         {PRIORITY_OPTIONS.map((option) => (
           <Button
             key={option.value}
@@ -66,11 +75,7 @@ export function FilterBar() {
             {option.label}
           </Button>
         ))}
-      </div>
-
-      {/* Tag Filters */}
-      <div className="flex items-center gap-1">
-        <span className="text-muted-foreground mr-1 text-sm">Tags:</span>
+        Tags
         {TAG_OPTIONS.map((option) => (
           <Badge
             key={option.value}
@@ -85,7 +90,7 @@ export function FilterBar() {
             {option.label}
           </Badge>
         ))}
-      </div>
+
 
       {/* Clear Filters */}
       {hasFilters && (
@@ -93,21 +98,23 @@ export function FilterBar() {
           variant="ghost"
           size="sm"
           onClick={clearFilters}
-          className="h-7 px-2 text-xs"
         >
           <X className="mr-1 size-3" />
           Clear
         </Button>
       )}
 
-      {/* Spacer */}
-      <div className="flex-1" />
+        </PopoverPopup>
+      </Popover>
+
+      <ThemeToggle />
+    
 
       <Popover>
         <PopoverTrigger
           render={
             <Button variant="outline" size="sm">
-              <SlidersHorizontalIcon />
+              <SlidersHorizontalIcon className="size-3" />
               Display
             </Button>
           }

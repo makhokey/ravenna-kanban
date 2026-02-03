@@ -2,14 +2,12 @@ import { Button } from "@repo/ui/components/button";
 import { Field } from "@repo/ui/components/field";
 import { Form } from "@repo/ui/components/form";
 import { Input } from "@repo/ui/components/input";
-import { Kbd, KbdGroup } from "@repo/ui/components/kbd";
 import { Separator } from "@repo/ui/components/separator";
 import { Textarea } from "@repo/ui/components/textarea";
-import { Tooltip, TooltipPopup, TooltipTrigger } from "@repo/ui/components/tooltip";
 import { useAtom } from "jotai";
-import { LoaderIcon, XIcon } from "lucide-react";
+import {  XIcon } from "lucide-react";
 import { useCardForm } from "~/hooks/use-card-form";
-import { panelAtom } from "~/stores/board";
+import { panelAtom } from "~/atoms/board";
 import type { PriorityValue, StatusValue } from "./card-schema";
 import { PrioritySelect } from "./priority-select";
 import { StatusSelect } from "./status-select";
@@ -40,19 +38,18 @@ export function CardPanel() {
   return (
     <div
       ref={containerRef}
-      className="bg-background flex w-96 flex-shrink-0 flex-col border-l"
+      className="bg-background flex w-82 flex-shrink-0 flex-col border-l"
     >
       <Form className="flex h-full flex-col">
         {/* Header with card ID and close button */}
-        <div className="flex items-center gap-2 border-b px-4 py-2">
+        <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
           {existingCard && (
-            <span className="text-muted-foreground text-sm font-medium">
+            <span className="text-card-foreground text-sm font-medium">
               {existingCard.displayId ?? existingCard.id.slice(0, 8).toUpperCase()}
             </span>
           )}
-          <div className="flex-1"></div>
           <Button variant="ghost" size="icon-sm" onClick={closePanel}>
-            <XIcon />
+            <XIcon className="size-3" />
           </Button>
         </div>
 
@@ -140,39 +137,6 @@ export function CardPanel() {
           <Separator />
         </div>
 
-        {/* Footer with selectors and save button */}
-        <div className="flex items-center justify-end px-4 py-2">
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={isPending}
-                  onClick={() => form.handleSubmit()}
-                >
-                  {isPending ? (
-                    <>
-                      <LoaderIcon className="size-4 animate-spin" />
-                      {mode === "create" ? "Creating" : "Saving"}
-                    </>
-                  ) : mode === "create" ? (
-                    "Create"
-                  ) : (
-                    "Save"
-                  )}
-                </Button>
-              }
-            />
-            <TooltipPopup>
-              {mode === "create" ? "Create" : "Save"}
-              <KbdGroup>
-                <Kbd>⌘</Kbd>
-                <Kbd>↵</Kbd>
-              </KbdGroup>
-            </TooltipPopup>
-          </Tooltip>
-        </div>
       </Form>
     </div>
   );

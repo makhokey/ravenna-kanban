@@ -1,4 +1,5 @@
 import { atom } from "jotai";
+import type { CardData } from "~/types/board";
 
 // View mode
 export type ViewMode = "kanban" | "table";
@@ -23,3 +24,10 @@ export const dialogAtom = atom<CardEditorState>(initialEditorState);
 
 // Side panel state for card editing
 export const panelAtom = atom<CardEditorState>(initialEditorState);
+
+export const activeCardAtom = atom<CardData | null>(null);
+export const tempCardOrderAtom = atom<Record<string, string[]> | null>(null);
+
+export const activeCardIdAtom = atom((get) => get(activeCardAtom)?.id ?? null);
+export const activeColumnIdAtom = atom((get) => get(activeCardAtom)?.columnId ?? null);
+

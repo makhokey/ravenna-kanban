@@ -7,15 +7,18 @@ import {
   type DragStartEvent,
   getFirstCollision,
   MeasuringStrategy,
+  PointerSensor,
   pointerWithin,
   rectIntersection,
+  useSensor,
+  useSensors,
 } from "@dnd-kit/core";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useRef } from "react";
 import { useBoard } from "~/hooks/use-board";
 import { useMoveCard } from "~/hooks/use-cards";
 import { calculateDropPosition, computeOptimisticCardOrder } from "~/lib/dnd-position";
-import { activeCardAtom, tempCardOrderAtom } from "~/stores/kanban-drag";
+import { activeCardAtom, tempCardOrderAtom } from "~/atoms/board";
 import type { CardData } from "~/types/board";
 import { isCardDragData } from "~/types/dnd";
 import { Column } from "./column";
@@ -33,7 +36,7 @@ function getTargetColumnId(over: {
   return null;
 }
 
-export function Board() {
+export function Kanban() {
   const { data: board } = useBoard();
   const moveCard = useMoveCard();
 
@@ -41,6 +44,13 @@ export function Board() {
   const setTempCardOrder = useSetAtom(tempCardOrderAtom);
   const tempCardOrder = useAtomValue(tempCardOrderAtom);
   const activeCard = useAtomValue(activeCardAtom);
+
+  // Require 8px movement before drag starts - allows click events to fire
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 3 },
+    }),
+  );
 
   // Ref for collision detection state - caches last over ID to prevent flickering
   const lastOverIdRef = useRef<string | null>(null);
@@ -173,6 +183,7 @@ export function Board() {
 
   return (
     <DndContext
+      sensors={sensors}
       collisionDetection={collisionDetectionStrategy}
       measuring={{
         droppable: {
@@ -183,7 +194,7 @@ export function Board() {
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="flex h-full gap-2 overflow-x-auto overscroll-x-contain p-3 [-webkit-overflow-scrolling:touch]">
+      <div className="flex h-full overflow-x-auto overscroll-x-contain px-2 [-webkit-overflow-scrolling:touch]">
         {board.columnIds.map((id) => (
           <Column
             key={id}

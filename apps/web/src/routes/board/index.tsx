@@ -27,10 +27,10 @@ function BoardPage() {
             </div>
             {/* Board skeleton */}
             <div className="flex flex-1 gap-4 overflow-x-auto p-4">
-              {[1, 2, 3].map((i) => (
+              {[1, 2, 3, 4, 5, ].map((i) => (
                 <div
                   key={i}
-                  className="bg-muted/50 h-96 w-72 flex-shrink-0 animate-pulse rounded-lg border"
+                  className="bg-muted/50 h-full w-92 flex-shrink-0 animate-pulse rounded-lg border"
                 />
               ))}
             </div>

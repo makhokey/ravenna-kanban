@@ -105,7 +105,7 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
 
 function DialogFooter({
   className,
-  variant = "default",
+  variant = "bare",
   ...props
 }: React.ComponentProps<"div"> & {
   variant?: "default" | "bare";

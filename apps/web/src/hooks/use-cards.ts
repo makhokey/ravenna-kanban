@@ -11,7 +11,7 @@ type CreateCardInput = {
   description?: string;
   columnId: string;
   // null = no priority, undefined = not provided
-  priority?: "low" | "medium" | "high" | null;
+  priority?: "low" | "medium" | "high" | "urgent" | null;
   // null = no status, undefined = not provided
   status?: "backlog" | "todo" | "in_progress" | "review" | "done" | null;
   // null = no tags, undefined = not provided
@@ -23,7 +23,7 @@ type UpdateCardInput = {
   title?: string;
   description?: string;
   // null = clear priority, undefined = unchanged
-  priority?: "low" | "medium" | "high" | null;
+  priority?: "low" | "medium" | "high" | "urgent" | null;
   // null = clear status, undefined = unchanged
   status?: "backlog" | "todo" | "in_progress" | "review" | "done" | null;
   // null = clear tags, undefined = unchanged

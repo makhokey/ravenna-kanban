@@ -10,7 +10,7 @@ import {
   type PriorityValue,
   type StatusValue,
 } from "~/components/shared/card-schema";
-import type { CardEditorState } from "~/stores/board";
+import type { CardEditorState } from "~/atoms/board";
 import type { CardData, ColumnData } from "~/types/board";
 import { useBoard } from "./use-board";
 import { useCreateCard, useUpdateCard } from "./use-cards";

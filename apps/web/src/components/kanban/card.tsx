@@ -11,8 +11,10 @@ import {
 } from "@repo/ui/components/alert-dialog";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
+import { Tooltip, TooltipPopup, TooltipTrigger } from "@repo/ui/components/tooltip";
 import { cn } from "@repo/ui/lib/utils";
 import { useAtom } from "jotai";
+import { Trash2 } from "lucide-react";
 import { type CSSProperties, memo, type Ref, useMemo, useState } from "react";
 import {
   getSelectedTags,
@@ -23,7 +25,7 @@ import {
 import { PrioritySelect } from "~/components/shared/priority-select";
 import { StatusSelect } from "~/components/shared/status-select";
 import { useUpdateCard } from "~/hooks/use-cards";
-import { panelAtom } from "~/stores/board";
+import { panelAtom } from "~/atoms/board";
 import type { CardData } from "~/types/board";
 
 export interface CardProps {
@@ -93,19 +95,19 @@ function CardComponent({
     <div
       ref={ref}
       className={cn(
-        "bg-card text-card-foreground group relative mb-2 flex h-auto min-h-32 cursor-grab flex-col gap-2 overflow-hidden rounded-lg border p-3 select-none active:cursor-grabbing",
+        "bg-card text-card-foreground group relative mx-2 mb-2 flex h-32 cursor-pointer flex-col gap-2 overflow-hidden rounded-lg border p-3 select-none",
         // Hide original when dragging (not the overlay)
         dragging && !dragOverlay && "opacity-0",
         // Drag overlay styling
-        dragOverlay && "cursor-grabbing shadow-xl shadow-black/25",
+        dragOverlay && "cursor-grabbing shadow-xl",
         // Fade-in animation for items mounted during drag
         fadeIn && "animate-fadeIn",
-        isSelected && "border-primary",
+        isSelected && "border-primary border-dashed",
       )}
       style={style}
       {...attributes}
       {...listeners}
-      onDoubleClick={() => {
+      onClick={() => {
         if (isSelected) {
           setPanel({ open: false, mode: "create" });
         } else {
@@ -118,8 +120,8 @@ function CardComponent({
         }
       }}
     >
-      {/* Header: Card ID | Status */}
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <header className="flex items-center justify-between">
         <span className="text-muted-foreground text-xs font-medium">
           {card.displayId ?? card.id.slice(0, 8).toUpperCase()}
         </span>
@@ -133,15 +135,14 @@ function CardComponent({
             iconOnly
           />
         </div>
-      </div>
+      </header>
 
-      {/* Body: Title */}
-      <h3 className="line-clamp-2 text-sm leading-tight font-semibold">{card.title}</h3>
-
-      {/* Tags row */}
-      {selectedTags.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5">
-          {selectedTags.map((tag) => (
+      <div className="flex flex-1 flex-col gap-1.5">
+        <h3 className="line-clamp-2 text-sm leading-tight font-semibold">
+          {card.title}
+        </h3>
+        <div className="flex h-5 items-center gap-1.5">
+          {selectedTags.slice(0, 2).map((tag) => (
             <Badge
               key={tag.value}
               variant="outline"
@@ -152,25 +153,53 @@ function CardComponent({
               {tag.label}
             </Badge>
           ))}
+          {selectedTags.length > 2 && (
+            <Tooltip>
+              <TooltipTrigger
+                className="cursor-default"
+                render={
+                  <Badge variant="outline" className="rounded-full" size="sm">
+                    +{selectedTags.length - 2}
+                  </Badge>
+                }
+              />
+              <TooltipPopup side="top">
+                {selectedTags.map((t) => t.label).join(", ")}
+              </TooltipPopup>
+            </Tooltip>
+          )}
         </div>
-      )}
+      </div>
 
-      {/* Footer: Date | Priority */}
-      <div className="mt-auto flex items-center justify-between">
+      <footer className="mt-auto flex items-center justify-between">
         <span className="text-muted-foreground text-xs">{formattedDate}</span>
-        <div onPointerDown={(e) => e.stopPropagation()}>
+        <div
+          className="flex items-center gap-1"
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          {onDelete && (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100"
+              onClick={() => setDeleteDialogOpen(true)}
+              aria-label="Delete card"
+            >
+              <Trash2 className="size-3.5" />
+            </Button>
+          )}
           <PrioritySelect
             value={(card.priority as PriorityValue) ?? "no priority"}
             onChange={handlePriorityChange}
             iconOnly
           />
         </div>
-      </div>
+      </footer>
 
       {/* Delete confirmation dialog */}
       {onDelete && (
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogPopup>
+          <AlertDialogPopup onPointerDown={(e) => e.stopPropagation()}>
             <AlertDialogHeader>
               <AlertDialogTitle>Delete card</AlertDialogTitle>
               <AlertDialogDescription>
@@ -180,13 +209,15 @@ function CardComponent({
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogClose render={<Button variant="outline">Cancel</Button>} />
-              <AlertDialogClose
-                render={
-                  <Button variant="destructive" onClick={() => onDelete(card.id)}>
-                    Delete
-                  </Button>
-                }
-              />
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  onDelete(card.id);
+                  setDeleteDialogOpen(false);
+                }}
+              >
+                Delete
+              </Button>
             </AlertDialogFooter>
           </AlertDialogPopup>
         </AlertDialog>

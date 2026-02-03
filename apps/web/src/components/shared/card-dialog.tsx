@@ -16,7 +16,7 @@ import { Tooltip, TooltipPopup, TooltipTrigger } from "@repo/ui/components/toolt
 import { useAtom } from "jotai";
 import { LoaderIcon, XIcon } from "lucide-react";
 import { useCardForm } from "~/hooks/use-card-form";
-import { dialogAtom } from "~/stores/board";
+import { dialogAtom } from "~/atoms/board";
 import type { PriorityValue, StatusValue } from "./card-schema";
 import { PrioritySelect } from "./priority-select";
 import { StatusSelect } from "./status-select";
@@ -76,7 +76,7 @@ export function CardDialog() {
             </form.Field>
           </DialogPanel>
 
-          <DialogFooter className="flex items-center justify-between px-4 py-2">
+          <DialogFooter  className="flex items-center justify-between px-4 py-2">
             <div className="flex w-full items-center gap-1">
               <form.Field name="status">
                 {(field) => (

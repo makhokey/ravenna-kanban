@@ -1,4 +1,5 @@
 import {
+  AlertTriangleIcon,
   CheckCircle2Icon,
   CircleDashedIcon,
   CircleDotDashedIcon,
@@ -63,6 +64,7 @@ export const PRIORITY_OPTIONS = [
   { label: "Low", value: "low", icon: SignalLowIcon, shortcut: "1" },
   { label: "Medium", value: "medium", icon: SignalMediumIcon, shortcut: "2" },
   { label: "High", value: "high", icon: SignalHighIcon, shortcut: "3" },
+  { label: "Urgent", value: "urgent", icon: AlertTriangleIcon, shortcut: "4" },
 ] as const;
 
 export const TAG_OPTIONS = [
@@ -147,7 +149,7 @@ export const cardFormSchema = z.object({
     .optional()
     .transform((val) => val?.trim() || undefined),
   priority: z
-    .enum(["no priority", "low", "medium", "high"])
+    .enum(["no priority", "low", "medium", "high", "urgent"])
     .default("no priority")
     // Transform "no priority" to null (clear) vs undefined (unchanged)
     .transform((val) => (val === "no priority" ? null : val)),
@@ -170,7 +172,7 @@ export const createCardServerSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   columnId: z.string().min(1, "Column ID is required"),
-  priority: z.enum(["low", "medium", "high"]).nullable().optional(),
+  priority: z.enum(["low", "medium", "high", "urgent"]).nullable().optional(),
   status: z
     .enum(["backlog", "todo", "in_progress", "review", "done"])
     .nullable()
@@ -182,7 +184,7 @@ export const updateCardServerSchema = z.object({
   id: z.uuid({ message: "Invalid card ID" }),
   title: z.string().min(1, "Title is required").optional(),
   description: z.string().optional(),
-  priority: z.enum(["low", "medium", "high"]).nullable().optional(),
+  priority: z.enum(["low", "medium", "high", "urgent"]).nullable().optional(),
   status: z
     .enum(["backlog", "todo", "in_progress", "review", "done"])
     .nullable()
