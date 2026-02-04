@@ -11,6 +11,8 @@ export type BoardSettings = {
   tagFilters: string[];
   sortField: SortField;
   sortDirection: SortDirection;
+  hiddenStatusColumns: string[];
+  hiddenPriorityColumns: string[];
 };
 
 export const DEFAULT_SETTINGS: BoardSettings = {
@@ -20,6 +22,8 @@ export const DEFAULT_SETTINGS: BoardSettings = {
   tagFilters: [],
   sortField: "manual",
   sortDirection: "desc",
+  hiddenStatusColumns: [],
+  hiddenPriorityColumns: [],
 };
 
 export const COOKIE_NAME = "board-settings";
@@ -79,6 +83,12 @@ export function parseCookieSettings(cookieHeader: string): BoardSettings {
       sortDirection: isValidSortDirection(parsed.sortDirection)
         ? parsed.sortDirection
         : DEFAULT_SETTINGS.sortDirection,
+      hiddenStatusColumns: Array.isArray(parsed.hiddenStatusColumns)
+        ? parsed.hiddenStatusColumns
+        : DEFAULT_SETTINGS.hiddenStatusColumns,
+      hiddenPriorityColumns: Array.isArray(parsed.hiddenPriorityColumns)
+        ? parsed.hiddenPriorityColumns
+        : DEFAULT_SETTINGS.hiddenPriorityColumns,
     };
   } catch {
     return DEFAULT_SETTINGS;

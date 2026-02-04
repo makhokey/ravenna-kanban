@@ -96,10 +96,11 @@ export function KanbanColumn({
     | { card?: { status: string; priority: string | null } }
     | undefined;
   const isOverThisGroup =
-    over?.id === groupKey ||
-    (groupBy === "status"
-      ? overCardData?.card?.status === groupKey
-      : (overCardData?.card?.priority || "none") === groupKey);
+    over !== null &&
+    (over.id === groupKey ||
+      (groupBy === "status"
+        ? overCardData?.card?.status === groupKey
+        : (overCardData?.card?.priority ?? "none") === groupKey));
   const isOver = isOverThisGroup && activeGroupKey !== groupKey;
 
   return (

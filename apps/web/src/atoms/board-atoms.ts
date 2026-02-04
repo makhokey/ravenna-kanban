@@ -12,6 +12,10 @@ export const groupByAtom = atom<GroupBy>("status");
 export const priorityFiltersAtom = atom<Set<string>>(new Set<string>());
 export const tagFiltersAtom = atom<Set<string>>(new Set<string>());
 
+// Hidden columns - empty set means "all visible" (inverse of filters)
+export const hiddenStatusColumnsAtom = atom<Set<string>>(new Set<string>());
+export const hiddenPriorityColumnsAtom = atom<Set<string>>(new Set<string>());
+
 // Sorting
 export type SortField = "manual" | "created" | "updated";
 export type SortDirection = "asc" | "desc";

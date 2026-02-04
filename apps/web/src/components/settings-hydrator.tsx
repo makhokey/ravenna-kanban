@@ -2,6 +2,8 @@ import { Provider, createStore } from "jotai";
 import { type ReactNode, useMemo } from "react";
 import {
   groupByAtom,
+  hiddenPriorityColumnsAtom,
+  hiddenStatusColumnsAtom,
   priorityFiltersAtom,
   sortDirectionAtom,
   sortFieldAtom,
@@ -26,6 +28,8 @@ export function SettingsHydrator({ settings, children }: SettingsHydratorProps) 
     s.set(tagFiltersAtom, new Set(settings.tagFilters));
     s.set(sortFieldAtom, settings.sortField);
     s.set(sortDirectionAtom, settings.sortDirection);
+    s.set(hiddenStatusColumnsAtom, new Set(settings.hiddenStatusColumns));
+    s.set(hiddenPriorityColumnsAtom, new Set(settings.hiddenPriorityColumns));
     return s;
   }, [
     settings.viewMode,
@@ -34,6 +38,8 @@ export function SettingsHydrator({ settings, children }: SettingsHydratorProps) 
     settings.tagFilters,
     settings.sortField,
     settings.sortDirection,
+    settings.hiddenStatusColumns,
+    settings.hiddenPriorityColumns,
   ]);
 
   return <Provider store={store}>{children}</Provider>;

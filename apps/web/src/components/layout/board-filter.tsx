@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import {
   groupByAtom,
+  hiddenPriorityColumnsAtom,
+  hiddenStatusColumnsAtom,
   priorityFiltersAtom,
   sortDirectionAtom,
   sortFieldAtom,
@@ -28,7 +30,7 @@ import {
   type SortField,
   type ViewMode,
 } from "~/atoms/board-atoms";
-import { PRIORITY_OPTIONS, TAG_OPTIONS } from "~/lib/card-config";
+import { PRIORITY_OPTIONS, STATUS_OPTIONS, TAG_OPTIONS } from "~/lib/card-config";
 import { clearBoardSettingsCookie, setBoardSettingsCookie } from "~/lib/cookies.client";
 import type { GroupBy } from "~/types/board-types";
 import { ThemeToggle } from "./theme-toggle";
@@ -46,6 +48,8 @@ export function BoardFilter() {
   const [tagFilters, setTagFilters] = useAtom(tagFiltersAtom);
   const [sortField, setSortField] = useAtom(sortFieldAtom);
   const [sortDirection, setSortDirection] = useAtom(sortDirectionAtom);
+  const [hiddenStatusColumns, setHiddenStatusColumns] = useAtom(hiddenStatusColumnsAtom);
+  const [hiddenPriorityColumns, setHiddenPriorityColumns] = useAtom(hiddenPriorityColumnsAtom);
 
   const handleViewModeChange = (mode: ViewMode) => {
     setViewMode(mode);
@@ -100,10 +104,38 @@ export function BoardFilter() {
     setBoardSettingsCookie({ priorityFilters: [], tagFilters: [] });
   };
 
+  const toggleHiddenStatusColumn = (value: string) => {
+    setHiddenStatusColumns((prev: Set<string>) => {
+      const next = new Set(prev);
+      if (next.has(value)) {
+        next.delete(value);
+      } else {
+        next.add(value);
+      }
+      setBoardSettingsCookie({ hiddenStatusColumns: [...next] });
+      return next;
+    });
+  };
+
+  const toggleHiddenPriorityColumn = (value: string) => {
+    setHiddenPriorityColumns((prev: Set<string>) => {
+      const next = new Set(prev);
+      if (next.has(value)) {
+        next.delete(value);
+      } else {
+        next.add(value);
+      }
+      setBoardSettingsCookie({ hiddenPriorityColumns: [...next] });
+      return next;
+    });
+  };
+
   const hasFilters = priorityFilters.size > 0 || tagFilters.size > 0;
+  const hasHiddenColumns = hiddenStatusColumns.size > 0 || hiddenPriorityColumns.size > 0;
 
   const hasNonDefaultSettings =
     hasFilters ||
+    hasHiddenColumns ||
     viewMode !== "kanban" ||
     groupBy !== "status" ||
     sortField !== "manual" ||
@@ -116,6 +148,8 @@ export function BoardFilter() {
     setTagFilters(new Set<string>());
     setSortField("manual");
     setSortDirection("desc");
+    setHiddenStatusColumns(new Set<string>());
+    setHiddenPriorityColumns(new Set<string>());
     clearBoardSettingsCookie();
   };
 
@@ -180,7 +214,7 @@ export function BoardFilter() {
             </Button>
           }
         />
-        <PopoverPopup align="end" className="w-48">
+        <PopoverPopup align="end" className="w-82">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
               <span className="text-muted-foreground text-xs font-medium">View</span>
@@ -234,14 +268,15 @@ export function BoardFilter() {
                 <Select
                   value={sortField}
                   onValueChange={(value) => value && handleSortFieldChange(value)}
+                  items={SORT_OPTIONS}
                 >
                   <SelectTrigger size="sm" className="flex-1">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {SORT_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                    {SORT_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -263,10 +298,41 @@ export function BoardFilter() {
               </div>
             </div>
 
+            <div className="flex flex-col gap-2">
+              <span className="text-muted-foreground text-xs font-medium">Columns</span>
+              <div className="flex flex-wrap gap-1">
+                {groupBy === "status"
+                  ? STATUS_OPTIONS.map((opt) => (
+                      <Button
+                        key={opt.value}
+                        variant={hiddenStatusColumns.has(opt.value) ? "secondary" : "outline"}
+                        size="sm"
+                        onClick={() => toggleHiddenStatusColumn(opt.value)}
+                        className="h-7 px-2 text-xs"
+                      >
+                        <opt.icon className="mr-1 size-3" />
+                        {opt.label}
+                      </Button>
+                    ))
+                  : PRIORITY_OPTIONS.map((opt) => (
+                      <Button
+                        key={opt.value}
+                        variant={hiddenPriorityColumns.has(opt.value) ? "secondary" : "outline"}
+                        size="sm"
+                        onClick={() => toggleHiddenPriorityColumn(opt.value)}
+                        className="h-7 px-2 text-xs"
+                      >
+                        <opt.icon className="mr-1 size-3" />
+                        {opt.label}
+                      </Button>
+                    ))}
+              </div>
+            </div>
+
             {hasNonDefaultSettings && (
               <Button variant="ghost" size="sm" onClick={resetToDefaults} className="w-full">
                 <RotateCcw className="size-3" />
-                Reset to Default
+                Reset
               </Button>
             )}
           </div>

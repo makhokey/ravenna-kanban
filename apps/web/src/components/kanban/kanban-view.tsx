@@ -19,6 +19,8 @@ import { memo, useCallback, useRef } from "react";
 import {
   activeCardAtom,
   groupByAtom,
+  hiddenPriorityColumnsAtom,
+  hiddenStatusColumnsAtom,
   priorityFiltersAtom,
   sortDirectionAtom,
   sortFieldAtom,
@@ -82,6 +84,10 @@ export function KanbanView() {
   const tagFilters = useAtomValue(tagFiltersAtom);
   const sortField = useAtomValue(sortFieldAtom);
   const sortDirection = useAtomValue(sortDirectionAtom);
+
+  // Hidden columns
+  const hiddenStatusColumns = useAtomValue(hiddenStatusColumnsAtom);
+  const hiddenPriorityColumns = useAtomValue(hiddenPriorityColumnsAtom);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -280,6 +286,10 @@ export function KanbanView() {
   const cardIdsByGroup: Record<string, string[]> =
     groupBy === "status" ? board.cardIdsByStatus : board.cardIdsByPriority;
 
+  // Filter out hidden columns
+  const hiddenColumns = groupBy === "status" ? hiddenStatusColumns : hiddenPriorityColumns;
+  const visibleGroupOrder = groupOrder.filter((key) => !hiddenColumns.has(key as string));
+
   return (
     <DndContext
       sensors={sensors}
@@ -294,7 +304,7 @@ export function KanbanView() {
       onDragCancel={handleDragCancel}
     >
       <div className="flex h-full overflow-x-auto overscroll-x-contain px-2 [-webkit-overflow-scrolling:touch]">
-        {groupOrder.map((groupKey) => {
+        {visibleGroupOrder.map((groupKey) => {
           const key = groupKey as string;
           const cardIds = tempCardOrder?.[key] ?? cardIdsByGroup[key] ?? [];
           return (

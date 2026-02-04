@@ -56,6 +56,12 @@ function getBoardSettingsFromCookie(): BoardSettings {
         parsed.sortDirection === "asc" || parsed.sortDirection === "desc"
           ? parsed.sortDirection
           : DEFAULT_SETTINGS.sortDirection,
+      hiddenStatusColumns: Array.isArray(parsed.hiddenStatusColumns)
+        ? parsed.hiddenStatusColumns
+        : DEFAULT_SETTINGS.hiddenStatusColumns,
+      hiddenPriorityColumns: Array.isArray(parsed.hiddenPriorityColumns)
+        ? parsed.hiddenPriorityColumns
+        : DEFAULT_SETTINGS.hiddenPriorityColumns,
     };
   } catch {
     return DEFAULT_SETTINGS;
