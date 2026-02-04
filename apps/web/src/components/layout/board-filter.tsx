@@ -1,4 +1,3 @@
-import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { Popover, PopoverPopup, PopoverTrigger } from "@repo/ui/components/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/components/select";
@@ -12,9 +11,12 @@ import {
   Layers,
   LayoutGrid,
   List,
+  Monitor,
+  Moon,
   RotateCcw,
   Signal,
   SlidersHorizontalIcon,
+  Sun,
   X,
 } from "lucide-react";
 import {
@@ -30,10 +32,10 @@ import {
   type SortField,
   type ViewMode,
 } from "~/atoms/board-atoms";
+import { useTheme } from "@repo/ui/lib/theme-provider";
 import { PRIORITY_OPTIONS, STATUS_OPTIONS, TAG_OPTIONS } from "~/lib/card-config";
 import { clearBoardSettingsCookie, setBoardSettingsCookie } from "~/lib/cookies.client";
 import type { GroupBy } from "~/types/board-types";
-import { ThemeToggle } from "./theme-toggle";
 
 const SORT_OPTIONS = [
   { label: "Manual", value: "manual" },
@@ -42,6 +44,7 @@ const SORT_OPTIONS = [
 ] as const;
 
 export function BoardFilter() {
+  const { theme, setTheme } = useTheme();
   const [viewMode, setViewMode] = useAtom(viewModeAtom);
   const [groupBy, setGroupBy] = useAtom(groupByAtom);
   const [priorityFilters, setPriorityFilters] = useAtom(priorityFiltersAtom);
@@ -164,46 +167,53 @@ export function BoardFilter() {
             </Button>
           }
         />
-        <PopoverPopup align="start" className="w-92 flex-col gap-2">
-          Priority
-          {PRIORITY_OPTIONS.map((option) => (
-            <Button
-              key={option.value}
-              variant={priorityFilters.has(option.value) ? "default" : "outline"}
-              size="sm"
-              onClick={() => togglePriority(option.value)}
-              className="h-7 px-2 text-xs"
-            >
-              <option.icon className="mr-1 size-3" />
-              {option.label}
-            </Button>
-          ))}
-          Tags
-          {TAG_OPTIONS.map((option) => (
-            <Badge
-              key={option.value}
-              variant={tagFilters.has(option.value) ? "default" : "outline"}
-              className={cn(
-                "cursor-pointer capitalize",
-                tagFilters.has(option.value) && "border-transparent",
-              )}
-              onClick={() => toggleTag(option.value)}
-            >
-              <span className={cn("size-2 rounded-full", option.color)} />
-              {option.label}
-            </Badge>
-          ))}
-          {/* Clear Filters */}
-          {hasFilters && (
-            <Button variant="ghost" size="sm" onClick={clearFilters}>
-              <X className="mr-1 size-3" />
-              Clear
-            </Button>
-          )}
+        <PopoverPopup align="start" className="w-72">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <span className="text-muted-foreground text-xs font-medium">Priority</span>
+              <div className="flex flex-wrap gap-1">
+                {PRIORITY_OPTIONS.map((opt) => (
+                  <Button
+                    key={opt.value}
+                    variant={priorityFilters.has(opt.value) ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => togglePriority(opt.value)}
+                    className="h-7 px-2 text-xs"
+                  >
+                    <opt.icon className="mr-1 size-3" />
+                    {opt.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <span className="text-muted-foreground text-xs font-medium">Tags</span>
+              <div className="flex flex-wrap gap-1">
+                {TAG_OPTIONS.map((opt) => (
+                  <Button
+                    key={opt.value}
+                    variant={tagFilters.has(opt.value) ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => toggleTag(opt.value)}
+                    className="h-7 px-2 text-xs"
+                  >
+                    <span className={cn("size-2 rounded-full", opt.color)} />
+                    {opt.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {hasFilters && (
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="w-full">
+                <X className="size-3" />
+                Clear Filters
+              </Button>
+            )}
+          </div>
         </PopoverPopup>
       </Popover>
-
-      <ThemeToggle />
 
       <Popover>
         <PopoverTrigger
@@ -305,7 +315,7 @@ export function BoardFilter() {
                   ? STATUS_OPTIONS.map((opt) => (
                       <Button
                         key={opt.value}
-                        variant={hiddenStatusColumns.has(opt.value) ? "secondary" : "outline"}
+                        variant={hiddenStatusColumns.has(opt.value) ? "default" : "outline"}
                         size="sm"
                         onClick={() => toggleHiddenStatusColumn(opt.value)}
                         className="h-7 px-2 text-xs"
@@ -317,7 +327,7 @@ export function BoardFilter() {
                   : PRIORITY_OPTIONS.map((opt) => (
                       <Button
                         key={opt.value}
-                        variant={hiddenPriorityColumns.has(opt.value) ? "secondary" : "outline"}
+                        variant={hiddenPriorityColumns.has(opt.value) ? "default" : "outline"}
                         size="sm"
                         onClick={() => toggleHiddenPriorityColumn(opt.value)}
                         className="h-7 px-2 text-xs"
@@ -327,6 +337,33 @@ export function BoardFilter() {
                       </Button>
                     ))}
               </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <span className="text-muted-foreground text-xs font-medium">Theme</span>
+              <ToggleGroup
+                value={[theme]}
+                onValueChange={(value) => {
+                  const newValue = value[0] as "light" | "dark" | "system" | undefined;
+                  if (newValue) setTheme(newValue);
+                }}
+                variant="outline"
+                className="w-full"
+                size="sm"
+              >
+                <Toggle value="light" className="flex-1 p-2">
+                  <Sun className="size-3" />
+                  Light
+                </Toggle>
+                <Toggle value="dark" className="flex-1 p-2">
+                  <Moon className="size-3" />
+                  Dark
+                </Toggle>
+                <Toggle value="system" className="flex-1 p-2">
+                  <Monitor className="size-3" />
+                  System
+                </Toggle>
+              </ToggleGroup>
             </div>
 
             {hasNonDefaultSettings && (

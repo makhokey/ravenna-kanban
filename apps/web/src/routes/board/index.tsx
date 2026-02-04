@@ -1,4 +1,4 @@
-import { createFileRoute, useLoaderData } from "@tanstack/react-router";
+import { createFileRoute, useLoaderData, useRouteContext } from "@tanstack/react-router";
 import { Suspense } from "react";
 import { getBoardSettings } from "~/api/board-api";
 import { CardDialog, CardPanel } from "~/components/card-editor";
@@ -7,18 +7,19 @@ import { SettingsHydrator } from "~/components/settings-hydrator";
 import { boardQueryOptions } from "~/hooks/use-board";
 
 export const Route = createFileRoute("/board/")({
+  beforeLoad: async () => {
+    const settings = await getBoardSettings();
+    return { settings };
+  },
   loader: async ({ context }) => {
-    const [board, settings] = await Promise.all([
-      context.queryClient.ensureQueryData(boardQueryOptions),
-      getBoardSettings(),
-    ]);
-    return { board, settings };
+    const board = await context.queryClient.ensureQueryData(boardQueryOptions);
+    return { board };
   },
   component: BoardPage,
 });
 
 function BoardPage() {
-  const { settings } = useLoaderData({ from: "/board/" });
+  const { settings } = useRouteContext({ from: "/board/" });
 
   return (
     <SettingsHydrator settings={settings}>

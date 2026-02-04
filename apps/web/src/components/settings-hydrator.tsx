@@ -24,12 +24,12 @@ export function SettingsHydrator({ settings, children }: SettingsHydratorProps) 
     const s = createStore();
     s.set(viewModeAtom, settings.viewMode);
     s.set(groupByAtom, settings.groupBy);
-    s.set(priorityFiltersAtom, new Set(settings.priorityFilters));
-    s.set(tagFiltersAtom, new Set(settings.tagFilters));
+    s.set(priorityFiltersAtom, new Set(settings.priorityFilters ?? []));
+    s.set(tagFiltersAtom, new Set(settings.tagFilters ?? []));
     s.set(sortFieldAtom, settings.sortField);
     s.set(sortDirectionAtom, settings.sortDirection);
-    s.set(hiddenStatusColumnsAtom, new Set(settings.hiddenStatusColumns));
-    s.set(hiddenPriorityColumnsAtom, new Set(settings.hiddenPriorityColumns));
+    s.set(hiddenStatusColumnsAtom, new Set(settings.hiddenStatusColumns ?? []));
+    s.set(hiddenPriorityColumnsAtom, new Set(settings.hiddenPriorityColumns ?? []));
     return s;
   }, [
     settings.viewMode,
