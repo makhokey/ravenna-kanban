@@ -1,8 +1,8 @@
 import { useMemo } from "react";
-import { safeParseJsonTags } from "~/components/shared/card-schema";
+import { safeParseJsonTags } from "~/lib/card-config";
 
 interface FilterableCard {
-  priority: string | null;
+  priority: string;
   tags: string | null;
 }
 
@@ -11,9 +11,8 @@ function matchesFilters(
   priorityFilters: Set<string>,
   tagFilters: Set<string>,
 ): boolean {
-  if (priorityFilters.size > 0) {
-    const cardPriority = card.priority ?? "no priority";
-    if (!priorityFilters.has(cardPriority)) return false;
+  if (priorityFilters.size > 0 && !priorityFilters.has(card.priority)) {
+    return false;
   }
   if (tagFilters.size > 0) {
     const cardTags = safeParseJsonTags(card.tags);

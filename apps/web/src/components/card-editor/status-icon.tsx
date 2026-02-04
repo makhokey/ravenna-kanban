@@ -1,5 +1,5 @@
 import { cn } from "@repo/ui/lib/utils";
-import type { StatusValue } from "./card-schema";
+import type { StatusValue } from "~/lib/card-config";
 
 interface StatusIconProps {
   status: StatusValue;

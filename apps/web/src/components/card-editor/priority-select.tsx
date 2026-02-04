@@ -18,7 +18,7 @@ import {
   PRIORITY_OPTIONS,
   type PriorityOption,
   type PriorityValue,
-} from "./card-schema";
+} from "~/lib/card-config";
 
 type PrioritySelectProps = {
   value: PriorityValue;
@@ -36,7 +36,7 @@ export function PrioritySelect({ value, onChange, iconOnly }: PrioritySelectProp
       autoHighlight
       items={PRIORITY_OPTIONS}
       value={selected}
-      onValueChange={(val) => onChange((val?.value ?? "no priority") as PriorityValue)}
+      onValueChange={(val) => onChange((val?.value ?? "none") as PriorityValue)}
       open={open}
       onOpenChange={setOpen}
     >

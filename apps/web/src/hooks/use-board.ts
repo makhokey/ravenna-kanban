@@ -1,5 +1,5 @@
 import { keepPreviousData, queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import { getFirstBoard } from "~/server/boards";
+import { getFirstBoard } from "~/api/board-api";
 import { boardKeys } from "./query-keys";
 
 // Default board ID for single-board mode

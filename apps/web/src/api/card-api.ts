@@ -4,12 +4,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { and, eq, isNull } from "drizzle-orm";
 import { generateKeyBetween } from "fractional-indexing";
 import { v4 as uuidv4 } from "uuid";
-import {
-  createCardServerSchema,
-  updateCardServerSchema,
-} from "~/components/shared/card-schema";
+import { createCardServerSchema, updateCardServerSchema } from "~/lib/card-config";
 import { getDb } from "~/lib/db";
-import { invalidateBoardCache } from "./cache";
+import { invalidateBoardCache } from "./cache-utils";
 
 // Helper to invalidate cache for a card's board
 async function invalidateCacheForCard(db: Db, cardId: string): Promise<void> {
@@ -86,7 +83,7 @@ export const createCard = createServerFn({ method: "POST" })
       title: data.title,
       description: data.description ?? null,
       boardId: data.boardId,
-      priority: data.priority ?? null,
+      priority: data.priority,
       status: data.status,
       tags: data.tags && data.tags.length > 0 ? JSON.stringify(data.tags) : null,
       position,
@@ -107,7 +104,7 @@ export const moveCard = createServerFn({ method: "POST" })
       status: string;
       position: string;
       boardId: string;
-      priority?: string | null;
+      priority?: string;
     }) => data,
   )
   .handler(async ({ data }) => {

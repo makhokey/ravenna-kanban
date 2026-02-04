@@ -148,7 +148,7 @@
     font-optical-sizing: auto;
     font-synthesis-weight: none;
     text-rendering: optimizeLegibility;
-    font-feature-settings: 'case';
+    font-feature-settings: "case";
     overscroll-behavior: contain;
     -webkit-font-smoothing: antialiased;
     -webkit-font-size-adjust: 100%;
@@ -172,20 +172,20 @@
   }
   body {
     @apply bg-background text-foreground;
-    overflow: hidden; 
+    overflow: hidden;
   }
 }
 
- ::-webkit-scrollbar {
-    width: 3px;
-  }
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: var(--border);
-  }
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: var(--border) transparent;
-  }
+::-webkit-scrollbar {
+  width: 3px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}

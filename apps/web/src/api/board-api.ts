@@ -1,16 +1,18 @@
+import { PRIORITY_VALUES, STATUS_VALUES } from "@repo/db/constants";
 import { boards, cards } from "@repo/db/schema";
 import type { Board, Card } from "@repo/db/types";
 import { createServerFn } from "@tanstack/react-start";
 import { eq, isNull } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { getDb } from "~/lib/db";
-import { cacheKeys, getCached } from "./cache";
+import { cacheKeys, getCached } from "./cache-utils";
 
-import type { CardData, NormalizedBoard, StatusValue } from "~/types/board";
+import type { CardData, NormalizedBoard, StatusValue } from "~/types/board-types";
 
-// Static status and priority orders
-const STATUS_ORDER: StatusValue[] = ["backlog", "todo", "in_progress", "review", "done"];
-const PRIORITY_ORDER = ["urgent", "high", "medium", "low", "none"] as const;
+// Static orders derived from single source of truth
+const STATUS_ORDER: StatusValue[] = [...STATUS_VALUES];
+// Priority order: urgent first, none at end (PRIORITY_VALUES is already ["none", "low", ...])
+const PRIORITY_ORDER = [...PRIORITY_VALUES].slice(1).reverse().concat("none");
 
 // Type for Drizzle query result with relations
 type BoardWithRelations = Board & {
@@ -42,8 +44,8 @@ function normalizeBoard(board: BoardWithRelations): NormalizedBoard {
     const status = (card.status as StatusValue) || "backlog";
     cardIdsByStatus[status].push(card.id);
 
-    // Group by priority
-    const priority = card.priority || "none";
+    // Group by priority (priority is never null, defaults to "none")
+    const priority = card.priority;
     if (!cardIdsByPriority[priority]) {
       cardIdsByPriority[priority] = [];
     }

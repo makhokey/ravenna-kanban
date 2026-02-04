@@ -18,7 +18,7 @@ import {
   STATUS_OPTIONS,
   type StatusOption,
   type StatusValue,
-} from "./card-schema";
+} from "~/lib/card-config";
 import { StatusIcon } from "./status-icon";
 
 type StatusSelectProps = {
@@ -47,11 +47,11 @@ export function StatusSelect({ value, onChange, iconOnly }: StatusSelectProps) {
               render={
                 iconOnly ? (
                   <Button variant="ghost" size="icon-xs">
-                    <StatusIcon status={selected.value}  />
+                    <StatusIcon status={selected.value} />
                   </Button>
                 ) : (
                   <Button variant="outline" size="xs" className="gap-2">
-                    <StatusIcon status={selected.value}  />
+                    <StatusIcon status={selected.value} />
                     <span>{selected.label}</span>
                   </Button>
                 )

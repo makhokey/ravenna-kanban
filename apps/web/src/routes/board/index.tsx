@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Suspense } from "react";
-import { BoardContainer, FilterBar } from "~/components/board";
-import { CardDialog, CardPanel } from "~/components/shared";
+import { CardDialog, CardPanel } from "~/components/card-editor";
+import { BoardFilter, BoardView } from "~/components/layout";
 import { boardQueryOptions } from "~/hooks/use-board";
 
 export const Route = createFileRoute("/board/")({
@@ -27,7 +27,7 @@ function BoardPage() {
             </div>
             {/* Board skeleton */}
             <div className="flex flex-1 gap-4 overflow-x-auto p-4">
-              {[1, 2, 3, 4, 5, ].map((i) => (
+              {[1, 2, 3, 4, 5].map((i) => (
                 <div
                   key={i}
                   className="bg-muted/50 h-full w-92 flex-shrink-0 animate-pulse rounded-lg border"
@@ -37,9 +37,9 @@ function BoardPage() {
           </div>
         }
       >
-        <FilterBar />
+        <BoardFilter />
         <div className="flex flex-1 overflow-hidden">
-          <BoardContainer />
+          <BoardView />
           <CardPanel />
         </div>
       </Suspense>

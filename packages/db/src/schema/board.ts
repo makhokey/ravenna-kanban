@@ -1,5 +1,6 @@
 import { relations } from "drizzle-orm";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import type { Priority, StatusValue } from "../constants";
 
 export const boards = sqliteTable("boards", {
   id: text("id").primaryKey(),
@@ -14,8 +15,8 @@ export const cards = sqliteTable("cards", {
   title: text("title").notNull(),
   description: text("description"),
   position: text("position").notNull(),
-  priority: text("priority"), // low, medium, high, urgent
-  status: text("status").notNull().default("backlog"), // backlog, todo, in_progress, review, done
+  priority: text("priority").$type<Priority>().notNull().default("none"),
+  status: text("status").$type<StatusValue>().notNull().default("backlog"),
   tags: text("tags"), // JSON array as string
   boardId: text("board_id")
     .notNull()

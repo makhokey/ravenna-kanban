@@ -1,9 +1,10 @@
+import type { Priority } from "@repo/db/types";
 import { toastManager } from "@repo/ui/components/toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { generateKeyBetween } from "fractional-indexing";
-import { comparePosition } from "~/lib/position";
-import { createCard, deleteCard, moveCard, updateCard } from "~/server/cards";
-import type { StatusValue } from "~/types/board";
+import { createCard, deleteCard, moveCard, updateCard } from "~/api/card-api";
+import { comparePosition } from "~/lib/position-compare";
+import type { StatusValue } from "~/types/board-types";
 import { boardKeys } from "./query-keys";
 import { BoardData, DEFAULT_BOARD_ID } from "./use-board";
 
@@ -12,9 +13,7 @@ type CreateCardInput = {
   description?: string;
   boardId: string;
   status: StatusValue;
-  // null = no priority, undefined = not provided
-  priority?: "low" | "medium" | "high" | "urgent" | null;
-  // null = no tags, undefined = not provided
+  priority?: Priority;
   tags?: string[] | null;
 };
 
@@ -22,11 +21,8 @@ type UpdateCardInput = {
   id: string;
   title?: string;
   description?: string;
-  // null = clear priority, undefined = unchanged
-  priority?: "low" | "medium" | "high" | "urgent" | null;
-  // null = clear status, undefined = unchanged
-  status?: "backlog" | "todo" | "in_progress" | "review" | "done" | null;
-  // null = clear tags, undefined = unchanged
+  priority?: Priority;
+  status?: StatusValue;
   tags?: string[] | null;
 };
 
@@ -35,7 +31,7 @@ type MoveCardInput = {
   status: StatusValue;
   position: string; // Fractional index
   boardId: string;
-  priority?: string | null; // Optional priority change for cross-priority moves
+  priority?: Priority;
 };
 
 type DeleteCardInput = {
@@ -48,30 +44,28 @@ function moveCardInBoard(
   cardId: string,
   targetStatus: StatusValue,
   newPosition: string,
-  targetPriority?: string | null,
+  targetPriority?: Priority,
 ): BoardData {
   const card = board.cardsById[cardId];
   if (!card) return board;
 
   const sourceStatus = (card.status as StatusValue) || "backlog";
-  const sourcePriority = card.priority || "none";
-  const newPriority = targetPriority !== undefined ? (targetPriority || "none") : sourcePriority;
+  const sourcePriority = card.priority as Priority;
+  const newPriority = targetPriority ?? sourcePriority;
 
   // Update card with new status, position, and optionally priority
   const updatedCard = {
     ...card,
     status: targetStatus,
     position: newPosition,
-    priority: targetPriority !== undefined ? targetPriority : card.priority,
+    priority: newPriority,
   };
 
   // Update lookup tables
   const cardsById = { ...board.cardsById, [cardId]: updatedCard };
 
   // Update source status group's card IDs (remove)
-  const sourceCardIds = board.cardIdsByStatus[sourceStatus].filter(
-    (id) => id !== cardId,
-  );
+  const sourceCardIds = board.cardIdsByStatus[sourceStatus].filter((id) => id !== cardId);
 
   // Update target status group's card IDs (insert sorted)
   const targetCardIds =
@@ -110,9 +104,9 @@ function moveCardInBoard(
     cardIdsByPriority[sourcePriority] = priorityCardIds;
   } else {
     // Cross-priority move - remove from source, add to target
-    cardIdsByPriority[sourcePriority] = (board.cardIdsByPriority[sourcePriority] ?? []).filter(
-      (id) => id !== cardId,
-    );
+    cardIdsByPriority[sourcePriority] = (
+      board.cardIdsByPriority[sourcePriority] ?? []
+    ).filter((id) => id !== cardId);
     const targetPriorityCardIds = [...(board.cardIdsByPriority[newPriority] ?? [])];
     const priorityInsertIdx = targetPriorityCardIds.findIndex(
       (id) => comparePosition(cardsById[id]!.position, newPosition) > 0,
@@ -155,8 +149,8 @@ export function useCreateCard() {
           : null;
         const newPosition = generateKeyBetween(lastPosition, null);
 
-        const priorityKey = input.priority || "none";
-        const priorityCardIds = old.cardIdsByPriority[priorityKey] ?? [];
+        const priority = input.priority ?? "none";
+        const priorityCardIds = old.cardIdsByPriority[priority] ?? [];
 
         const newCard = {
           id: tempId,
@@ -164,10 +158,8 @@ export function useCreateCard() {
           title: input.title,
           description: input.description ?? null,
           boardId: input.boardId,
-          // null or undefined both mean no priority
-          priority: input.priority ?? null,
+          priority,
           status: input.status,
-          // null or undefined both mean no tags, empty array also means no tags
           tags: input.tags && input.tags.length > 0 ? JSON.stringify(input.tags) : null,
           position: newPosition,
           createdAt: new Date(),
@@ -184,7 +176,7 @@ export function useCreateCard() {
           },
           cardIdsByPriority: {
             ...old.cardIdsByPriority,
-            [priorityKey]: [...priorityCardIds, tempId],
+            [priority]: [...priorityCardIds, tempId],
           },
         };
       });
@@ -234,9 +226,10 @@ export function useUpdateCard() {
           // null = clear, undefined = unchanged
           priority: input.priority !== undefined ? input.priority : card.priority,
           // status is required, never null - undefined means unchanged
-          status: input.status !== undefined && input.status !== null
-            ? input.status
-            : card.status,
+          status:
+            input.status !== undefined && input.status !== null
+              ? input.status
+              : card.status,
           // null = clear, undefined = unchanged
           tags:
             input.tags !== undefined
@@ -281,7 +274,13 @@ export function useMoveCard() {
       // Optimistically move the card
       queryClient.setQueryData<BoardData>(queryKey, (old) => {
         if (!old) return old;
-        return moveCardInBoard(old, input.cardId, input.status, input.position, input.priority);
+        return moveCardInBoard(
+          old,
+          input.cardId,
+          input.status,
+          input.position,
+          input.priority,
+        );
       });
 
       return { previous };
@@ -317,7 +316,7 @@ export function useDeleteCard() {
         if (!card) return old;
 
         const status = (card.status as StatusValue) || "backlog";
-        const priorityKey = card.priority || "none";
+        const priority = card.priority as Priority;
 
         // Remove from cardsById
         const { [input.id]: _removed, ...cardsById } = old.cardsById;
@@ -332,7 +331,7 @@ export function useDeleteCard() {
         // Remove from cardIdsByPriority
         const cardIdsByPriority = {
           ...old.cardIdsByPriority,
-          [priorityKey]: (old.cardIdsByPriority[priorityKey] ?? []).filter(
+          [priority]: (old.cardIdsByPriority[priority] ?? []).filter(
             (id) => id !== input.id,
           ),
         };

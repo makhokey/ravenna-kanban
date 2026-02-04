@@ -1,31 +1,12 @@
-import {
-  defaultAnimateLayoutChanges,
-  useSortable,
-  type AnimateLayoutChanges,
-} from "@dnd-kit/sortable";
-import { useEffect, useState } from "react";
-import type { CardData } from "~/types/board";
-import type { CardDragData } from "~/types/dnd";
+import { useSortable } from "@dnd-kit/sortable";
+import { useState } from "react";
+import { cardAnimateLayoutChanges } from "~/lib/dnd-utils";
+import type { CardData } from "~/types/board-types";
+import type { CardDragData } from "~/types/dnd-types";
 import { Card } from "./card";
 
 interface SortableCardProps {
   card: CardData;
-}
-
-// Enable smooth animations when items are reordered, including after drag ends
-const animateLayoutChanges: AnimateLayoutChanges = (args) =>
-  defaultAnimateLayoutChanges({ ...args, wasDragging: true });
-
-// Hook to detect if component was mounted during an active drag
-function useMountStatus() {
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    const timeout = setTimeout(() => setIsMounted(true), 500);
-    return () => clearTimeout(timeout);
-  }, []);
-
-  return isMounted;
 }
 
 export function SortableCard({ card }: SortableCardProps) {
@@ -33,18 +14,16 @@ export function SortableCard({ card }: SortableCardProps) {
     useSortable({
       id: card.id,
       data: { type: "card", card } satisfies CardDragData,
-      animateLayoutChanges,
+      animateLayoutChanges: cardAnimateLayoutChanges,
     });
-
-  const mounted = useMountStatus();
-  const mountedWhileDragging = isDragging && !mounted;
+  const [mountedDuringDrag] = useState(() => isDragging);
 
   return (
     <Card
       ref={setNodeRef}
       card={card}
       dragging={isDragging}
-      fadeIn={mountedWhileDragging}
+      fadeIn={mountedDuringDrag}
       transform={transform}
       transition={transition}
       listeners={listeners}

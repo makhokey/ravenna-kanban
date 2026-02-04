@@ -1,7 +1,7 @@
 import { Button } from "@repo/ui/components/button";
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { createDefaultBoard } from "~/server/boards";
+import { createDefaultBoard } from "~/api/board-api";
 
 export const Route = createFileRoute("/board/setup")({
   component: SetupPage,

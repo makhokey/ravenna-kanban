@@ -1,4 +1,4 @@
-import type { CardData } from "./board";
+import type { CardData } from "./board-types";
 
 export interface CardDragData {
   type: "card";

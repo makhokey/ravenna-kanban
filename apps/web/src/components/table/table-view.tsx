@@ -12,17 +12,17 @@ import { cn } from "@repo/ui/lib/utils";
 import { useAtomValue, useSetAtom } from "jotai";
 import { Pencil, Trash2 } from "lucide-react";
 import { useMemo } from "react";
+import { dialogAtom, priorityFiltersAtom, tagFiltersAtom } from "~/atoms/board-atoms";
+import { useBoard } from "~/hooks/use-board";
+import { useDeleteCard } from "~/hooks/use-cards";
+import { useFilteredCards } from "~/hooks/use-filtered-cards";
 import {
   getPriorityOption,
   getStatusOption,
   safeParseJsonTags,
   TAG_OPTIONS,
-} from "~/components/shared/card-schema";
-import { useBoard } from "~/hooks/use-board";
-import { useDeleteCard } from "~/hooks/use-cards";
-import { useFilteredCards } from "~/hooks/use-filtered-cards";
-import { dialogAtom, priorityFiltersAtom, tagFiltersAtom } from "~/atoms/board";
-import type { StatusValue } from "~/types/board";
+} from "~/lib/card-config";
+import type { StatusValue } from "~/types/board-types";
 
 const priorityColors = {
   low: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",

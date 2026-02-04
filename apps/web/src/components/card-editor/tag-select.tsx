@@ -14,7 +14,7 @@ import { Kbd } from "@repo/ui/components/kbd";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "@repo/ui/components/tooltip";
 import { TagIcon } from "lucide-react";
 import { useState } from "react";
-import { getSelectedTags, TAG_OPTIONS, type TagOption } from "./card-schema";
+import { getSelectedTags, TAG_OPTIONS, type TagOption } from "~/lib/card-config";
 
 type TagSelectProps = {
   value: string[];

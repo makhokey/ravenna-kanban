@@ -2,22 +2,17 @@ import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { useAtomValue } from "jotai";
 import { useMemo, useRef } from "react";
 import { VList, type VListHandle } from "virtua";
-import { activeCardIdAtom } from "~/atoms/board";
-import type { CardData } from "~/types/board";
+import { activeCardIdAtom } from "~/atoms/board-atoms";
+import type { CardData } from "~/types/board-types";
 import { SortableCard } from "./sortable-card";
 
-interface VirtualizedCardListProps {
+interface CardListProps {
   cardIds: string[];
   cardsById: Record<string, CardData>;
 }
 
-export function VirtualizedCardList({
-  cardIds,
-  cardsById,
-}: VirtualizedCardListProps) {
-  // Subscribe directly to activeCardId - only re-renders when this changes
+export function CardList({ cardIds, cardsById }: CardListProps) {
   const activeId = useAtomValue(activeCardIdAtom);
-
   const listRef = useRef<VListHandle>(null);
 
   const keepMounted = useMemo(() => {

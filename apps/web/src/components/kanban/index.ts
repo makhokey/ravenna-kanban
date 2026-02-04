@@ -1,3 +1,3 @@
 export { Card } from "./card";
-export { Column } from "./column";
-export { Kanban } from "./kanban";
+export { KanbanColumn } from "./kanban-column";
+export { KanbanView } from "./kanban-view";

@@ -1,10 +1,11 @@
-import type { Card } from "@repo/db/types";
+import type { Card, GroupBy, Priority, StatusValue } from "@repo/db/types";
 
 export type CardData = Card;
 
-export type StatusValue = "backlog" | "todo" | "in_progress" | "review" | "done";
-export type PriorityValue = "low" | "medium" | "high" | "urgent" | null;
-export type GroupBy = "status" | "priority";
+// Re-export from @repo/db for convenience
+export type { GroupBy, StatusValue };
+// Alias for backward compatibility
+export type PriorityValue = Priority | null;
 
 // Domain-specific normalized structure for O(1) lookups
 export interface NormalizedBoard {
@@ -17,6 +18,6 @@ export interface NormalizedBoard {
   statusOrder: StatusValue[];
   cardIdsByStatus: Record<StatusValue, string[]>;
   // Priority grouping
-  priorityOrder: (PriorityValue | "none")[];
+  priorityOrder: (Priority | "none")[];
   cardIdsByPriority: Record<string, string[]>;
 }

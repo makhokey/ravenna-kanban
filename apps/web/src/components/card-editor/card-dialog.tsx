@@ -15,9 +15,9 @@ import { Textarea } from "@repo/ui/components/textarea";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "@repo/ui/components/tooltip";
 import { useAtom } from "jotai";
 import { LoaderIcon, XIcon } from "lucide-react";
+import { dialogAtom } from "~/atoms/board-atoms";
 import { useCardForm } from "~/hooks/use-card-form";
-import { dialogAtom } from "~/atoms/board";
-import type { PriorityValue, StatusValue } from "./card-schema";
+import type { PriorityValue, StatusValue } from "~/lib/card-config";
 import { PrioritySelect } from "./priority-select";
 import { StatusSelect } from "./status-select";
 import { TagSelect } from "./tag-select";
@@ -76,7 +76,7 @@ export function CardDialog() {
             </form.Field>
           </DialogPanel>
 
-          <DialogFooter  className="flex items-center justify-between px-4 pb-4">
+          <DialogFooter className="flex items-center justify-between px-4 pb-4">
             <div className="flex w-full items-center gap-1">
               <form.Field name="status">
                 {(field) => (
@@ -90,7 +90,7 @@ export function CardDialog() {
               <form.Field name="priority">
                 {(field) => (
                   <PrioritySelect
-                    value={(field.state.value ?? "no priority") as PriorityValue}
+                    value={(field.state.value ?? "none") as PriorityValue}
                     onChange={(val) => field.handleChange(val)}
                   />
                 )}
@@ -129,7 +129,7 @@ export function CardDialog() {
                 }
               />
               <TooltipPopup>
-                {mode === "create" ? "Create " : "Save "} 
+                {mode === "create" ? "Create " : "Save "}
                 <KbdGroup>
                   <Kbd>⌘</Kbd>
                   <Kbd>↵</Kbd>

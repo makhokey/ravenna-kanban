@@ -2,6 +2,7 @@ import { toastManager } from "@repo/ui/components/toast";
 import { useForm } from "@tanstack/react-form-start";
 import { useCallback, useEffect, useRef } from "react";
 import { useDebouncedCallback } from "use-debounce";
+import type { CardEditorState } from "~/atoms/board-atoms";
 import {
   cardFormSchema,
   safeParseJsonTags,
@@ -9,9 +10,8 @@ import {
   type CardFormValues,
   type PriorityValue,
   type StatusValue,
-} from "~/components/shared/card-schema";
-import type { CardEditorState } from "~/atoms/board";
-import type { CardData } from "~/types/board";
+} from "~/lib/card-config";
+import type { CardData } from "~/types/board-types";
 import { useBoard } from "./use-board";
 import { useCreateCard, useUpdateCard } from "./use-cards";
 
@@ -43,7 +43,7 @@ export function useCardForm({
       return {
         title: existingCard.title,
         description: existingCard.description ?? "",
-        priority: (existingCard.priority as PriorityValue) ?? "no priority",
+        priority: existingCard.priority as PriorityValue,
         status: (existingCard.status as StatusValue) ?? "backlog",
         tags,
       };
@@ -52,7 +52,7 @@ export function useCardForm({
     return {
       title: "",
       description: "",
-      priority: "no priority",
+      priority: "none",
       status: editorState.status ?? "backlog",
       tags: [],
     };
@@ -146,10 +146,7 @@ export function useCardForm({
   const handlePriorityChange = useCallback(
     (priority: PriorityValue) => {
       if (autoSave && editorState.mode === "edit" && editorState.cardId) {
-        updateCard.mutate({
-          id: editorState.cardId,
-          priority: priority === "no priority" ? null : priority,
-        });
+        updateCard.mutate({ id: editorState.cardId, priority });
       }
     },
     [autoSave, editorState, updateCard],

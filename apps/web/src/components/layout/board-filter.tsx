@@ -13,18 +13,18 @@ import {
   SlidersHorizontalIcon,
   X,
 } from "lucide-react";
-import { PRIORITY_OPTIONS, TAG_OPTIONS } from "~/components/shared/card-schema";
 import {
   groupByAtom,
   priorityFiltersAtom,
   tagFiltersAtom,
   viewModeAtom,
   type ViewMode,
-} from "~/atoms/board";
-import type { GroupBy } from "~/types/board";
-import { ThemeToggle } from "~/components/theme-toggle";
+} from "~/atoms/board-atoms";
+import { PRIORITY_OPTIONS, TAG_OPTIONS } from "~/lib/card-config";
+import type { GroupBy } from "~/types/board-types";
+import { ThemeToggle } from "./theme-toggle";
 
-export function FilterBar() {
+export function BoardFilter() {
   const [viewMode, setViewMode] = useAtom(viewModeAtom);
   const [groupBy, setGroupBy] = useAtom(groupByAtom);
   const [priorityFilters, setPriorityFilters] = useAtom(priorityFiltersAtom);
@@ -62,7 +62,7 @@ export function FilterBar() {
   const hasFilters = priorityFilters.size > 0 || tagFilters.size > 0;
 
   return (
-    <div className="flex justify-between items-center gap-4 border-b px-4 py-1.5">
+    <div className="flex items-center justify-between gap-4 border-b px-4 py-1.5">
       <Popover>
         <PopoverTrigger
           render={
@@ -72,54 +72,46 @@ export function FilterBar() {
             </Button>
           }
         />
-        <PopoverPopup align="start" className="w-92 flex-col gap-2" >
-       Priority
-        {PRIORITY_OPTIONS.map((option) => (
-          <Button
-            key={option.value}
-            variant={priorityFilters.has(option.value) ? "default" : "outline"}
-            size="sm"
-            onClick={() => togglePriority(option.value)}
-            className="h-7 px-2 text-xs"
-          >
-            <option.icon className="mr-1 size-3" />
-            {option.label}
-          </Button>
-        ))}
-        Tags
-        {TAG_OPTIONS.map((option) => (
-          <Badge
-            key={option.value}
-            variant={tagFilters.has(option.value) ? "default" : "outline"}
-            className={cn(
-              "cursor-pointer capitalize",
-              tagFilters.has(option.value) && "border-transparent",
-            )}
-            onClick={() => toggleTag(option.value)}
-          >
-            <span className={cn("size-2 rounded-full", option.color)} />
-            {option.label}
-          </Badge>
-        ))}
-
-
-      {/* Clear Filters */}
-      {hasFilters && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={clearFilters}
-        >
-          <X className="mr-1 size-3" />
-          Clear
-        </Button>
-      )}
-
+        <PopoverPopup align="start" className="w-92 flex-col gap-2">
+          Priority
+          {PRIORITY_OPTIONS.map((option) => (
+            <Button
+              key={option.value}
+              variant={priorityFilters.has(option.value) ? "default" : "outline"}
+              size="sm"
+              onClick={() => togglePriority(option.value)}
+              className="h-7 px-2 text-xs"
+            >
+              <option.icon className="mr-1 size-3" />
+              {option.label}
+            </Button>
+          ))}
+          Tags
+          {TAG_OPTIONS.map((option) => (
+            <Badge
+              key={option.value}
+              variant={tagFilters.has(option.value) ? "default" : "outline"}
+              className={cn(
+                "cursor-pointer capitalize",
+                tagFilters.has(option.value) && "border-transparent",
+              )}
+              onClick={() => toggleTag(option.value)}
+            >
+              <span className={cn("size-2 rounded-full", option.color)} />
+              {option.label}
+            </Badge>
+          ))}
+          {/* Clear Filters */}
+          {hasFilters && (
+            <Button variant="ghost" size="sm" onClick={clearFilters}>
+              <X className="mr-1 size-3" />
+              Clear
+            </Button>
+          )}
         </PopoverPopup>
       </Popover>
 
       <ThemeToggle />
-    
 
       <Popover>
         <PopoverTrigger

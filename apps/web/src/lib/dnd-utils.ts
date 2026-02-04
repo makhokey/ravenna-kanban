@@ -1,5 +1,16 @@
+import {
+  defaultAnimateLayoutChanges,
+  type AnimateLayoutChanges,
+} from "@dnd-kit/sortable";
 import { generateKeyBetween } from "fractional-indexing";
-import type { CardData, NormalizedBoard, StatusValue } from "~/types/board";
+import type { CardData, NormalizedBoard, StatusValue } from "~/types/board-types";
+
+/**
+ * Custom animate layout changes config for cards.
+ * Always animates when the item was previously dragging.
+ */
+export const cardAnimateLayoutChanges: AnimateLayoutChanges = (args) =>
+  defaultAnimateLayoutChanges({ ...args, wasDragging: true });
 
 type DropPositionResult = {
   newPosition: string;
@@ -45,7 +56,6 @@ function calculateDropPositionInGroup(
   overId: string,
   overCard: CardData | undefined,
 ): DropPositionResult {
-
   if (overCard) {
     // Dropped on a card - insert relative to it
     const overIndex = targetCardIds.indexOf(overId);

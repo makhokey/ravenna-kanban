@@ -16,11 +16,11 @@ import { Textarea } from "@repo/ui/components/textarea";
 import { useAtom } from "jotai";
 import { ChevronDown, ChevronUp, Trash2, XIcon } from "lucide-react";
 import { useState } from "react";
+import { panelAtom } from "~/atoms/board-atoms";
 import { useBoard } from "~/hooks/use-board";
 import { useCardForm } from "~/hooks/use-card-form";
 import { useDeleteCard } from "~/hooks/use-cards";
-import { panelAtom } from "~/atoms/board";
-import type { PriorityValue, StatusValue } from "./card-schema";
+import type { PriorityValue, StatusValue } from "~/lib/card-config";
 import { PrioritySelect } from "./priority-select";
 import { StatusSelect } from "./status-select";
 import { TagSelect } from "./tag-select";
@@ -86,10 +86,7 @@ export function CardPanel() {
   if (!panel.open) return null;
 
   return (
-    <div
-      ref={containerRef}
-      className="bg-card flex w-82 flex-shrink-0 flex-col border-l"
-    >
+    <div ref={containerRef} className="bg-card flex w-82 shrink-0 flex-col border-l">
       <Form className="flex h-full flex-col">
         {/* Header with card ID, navigation, and close button */}
         <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
@@ -184,7 +181,7 @@ export function CardPanel() {
                 <form.Field name="priority">
                   {(field) => (
                     <PrioritySelect
-                      value={(field.state.value ?? "no priority") as PriorityValue}
+                      value={(field.state.value ?? "none") as PriorityValue}
                       onChange={(val) => {
                         field.handleChange(val);
                         handlePriorityChange(val);
@@ -208,26 +205,23 @@ export function CardPanel() {
                   )}
                 </form.Field>
               </div>
-                {existingCard && (
-              <div className="flex items-center gap-3">
-                                <span className="text-muted-foreground w-20 text-sm">Delete</span>
-              <Button
-                variant="destructive"
-                size="icon-sm"
-                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                onClick={() => setDeleteDialogOpen(true)}
-              >
-                <Trash2 className="size-3" />
-              </Button>
-            </div>
-          )}
+              {existingCard && (
+                <div className="flex items-center gap-3">
+                  <span className="text-muted-foreground w-20 text-sm">Delete</span>
+                  <Button
+                    variant="destructive"
+                    size="icon-sm"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => setDeleteDialogOpen(true)}
+                  >
+                    <Trash2 className="size-3" />
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
           <Separator />
-
-        
         </div>
-
       </Form>
 
       {/* Delete confirmation dialog */}
@@ -237,12 +231,18 @@ export function CardPanel() {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete card</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete "{existingCard.title}"? This action
-                cannot be undone.
+                Are you sure you want to delete "{existingCard.title}"? This action cannot
+                be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="px-4 pb-4">
-              <AlertDialogClose render={<Button variant="outline" size="sm">Cancel</Button>} />
+              <AlertDialogClose
+                render={
+                  <Button variant="outline" size="sm">
+                    Cancel
+                  </Button>
+                }
+              />
               <Button variant="destructive" size="sm" onClick={handleDelete}>
                 Delete
               </Button>

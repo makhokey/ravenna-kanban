@@ -3,23 +3,22 @@ import type { Transform } from "@dnd-kit/utilities";
 import { Badge } from "@repo/ui/components/badge";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "@repo/ui/components/tooltip";
 import { cn } from "@repo/ui/lib/utils";
-import { useAtom } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import { type CSSProperties, memo, type Ref, useMemo } from "react";
+import { panelAtom, selectedCardIdAtom } from "~/atoms/board-atoms";
+import { PrioritySelect } from "~/components/card-editor/priority-select";
+import { StatusSelect } from "~/components/card-editor/status-select";
+import { useUpdateCard } from "~/hooks/use-cards";
 import {
   getSelectedTags,
-  safeParseJsonTags,
   type PriorityValue,
+  safeParseJsonTags,
   type StatusValue,
-} from "~/components/shared/card-schema";
-import { PrioritySelect } from "~/components/shared/priority-select";
-import { StatusSelect } from "~/components/shared/status-select";
-import { useUpdateCard } from "~/hooks/use-cards";
-import { panelAtom } from "~/atoms/board";
-import type { CardData } from "~/types/board";
+} from "~/lib/card-config";
+import type { CardData } from "~/types/board-types";
 
-export interface CardProps {
+export interface CardComponentProps {
   card: CardData;
-  // Drag state props (following dnd-kit Item pattern)
   dragOverlay?: boolean;
   dragging?: boolean;
   fadeIn?: boolean;
@@ -40,11 +39,12 @@ function CardComponent({
   listeners,
   attributes,
   ref,
-}: CardProps) {
-  const [panel, setPanel] = useAtom(panelAtom);
+}: CardComponentProps) {
+  const selectedCardId = useAtomValue(selectedCardIdAtom);
+  const setPanel = useSetAtom(panelAtom);
   const updateCard = useUpdateCard();
 
-  const isSelected = panel.open && panel.cardId === card.id;
+  const isSelected = selectedCardId === card.id;
 
   const tags = useMemo(() => safeParseJsonTags(card.tags), [card.tags]);
   const selectedTags = useMemo(() => getSelectedTags(tags), [tags]);
@@ -57,10 +57,7 @@ function CardComponent({
   }, [card.createdAt]);
 
   const handlePriorityChange = (priority: PriorityValue) => {
-    updateCard.mutate({
-      id: card.id,
-      priority: priority === "no priority" ? null : priority,
-    });
+    updateCard.mutate({ id: card.id, priority });
   };
 
   const handleStatusChange = (status: StatusValue) => {
@@ -81,7 +78,7 @@ function CardComponent({
     <div
       ref={ref}
       className={cn(
-        "bg-card text-card-foreground group relative mb-2 flex h-32 mx-2.5 cursor-pointer flex-col gap-2 overflow-hidden rounded-lg border p-3 select-none",
+        "bg-card text-card-foreground group relative mx-2.5 mb-2 flex h-32 cursor-pointer flex-col gap-2 overflow-hidden rounded-lg border p-3 select-none",
         // Hide original when dragging (not the overlay)
         dragging && !dragOverlay && "opacity-0",
         // Drag overlay styling
@@ -101,7 +98,7 @@ function CardComponent({
             open: true,
             mode: "edit",
             cardId: card.id,
-            status: (card.status as "backlog" | "todo" | "in_progress" | "review" | "done") ?? "backlog",
+            status: (card.status as StatusValue) ?? "backlog",
           });
         }
       }}
@@ -124,9 +121,7 @@ function CardComponent({
       </header>
 
       <div className="flex flex-1 flex-col gap-1.5">
-        <h3 className="line-clamp-2 text-sm leading-tight font-semibold">
-          {card.title}
-        </h3>
+        <h3 className="line-clamp-2 text-sm leading-tight font-semibold">{card.title}</h3>
         <div className="flex h-5 items-center gap-1.5">
           {selectedTags.slice(0, 2).map((tag) => (
             <Badge
@@ -164,7 +159,7 @@ function CardComponent({
           onPointerDown={(e) => e.stopPropagation()}
         >
           <PrioritySelect
-            value={(card.priority as PriorityValue) ?? "no priority"}
+            value={card.priority as PriorityValue}
             onChange={handlePriorityChange}
             iconOnly
           />
