@@ -6,6 +6,7 @@ import { generateKeyBetween } from "fractional-indexing";
 import { v4 as uuidv4 } from "uuid";
 import { createCardServerSchema, updateCardServerSchema } from "~/lib/card-config";
 import { getDb } from "~/lib/db";
+import { cardLogger } from "~/lib/logger";
 import { invalidateBoardCache } from "./cache-utils";
 
 // Helper to invalidate cache for a card's board
@@ -23,6 +24,8 @@ export const getCards = createServerFn({ method: "GET" })
       data,
   )
   .handler(async ({ data }) => {
+    const log = cardLogger.child({ fn: "getCards", boardId: data?.boardId, priority: data?.priority });
+    log.info("fetching cards");
     const db = getDb();
     // Always filter out soft-deleted cards
     const conditions = [isNull(cards.deletedAt)];
@@ -30,11 +33,14 @@ export const getCards = createServerFn({ method: "GET" })
     if (data?.boardId) conditions.push(eq(cards.boardId, data.boardId));
     if (data?.priority) conditions.push(eq(cards.priority, data.priority));
 
-    return db
+    const result = await db
       .select()
       .from(cards)
       .where(and(...conditions))
       .orderBy(cards.position);
+
+    log.info({ count: result.length }, "cards fetched");
+    return result;
   });
 
 // Create card
@@ -47,6 +53,8 @@ export const createCard = createServerFn({ method: "POST" })
     return result.data;
   })
   .handler(async ({ data }) => {
+    const log = cardLogger.child({ fn: "createCard", boardId: data.boardId, status: data.status });
+    log.info({ title: data.title }, "creating card");
     const db = getDb();
     const id = uuidv4();
     const now = new Date();
@@ -93,6 +101,7 @@ export const createCard = createServerFn({ method: "POST" })
 
     await invalidateBoardCache(data.boardId);
 
+    log.info({ id, displayId }, "card created");
     return { id, displayId };
   });
 
@@ -108,6 +117,8 @@ export const moveCard = createServerFn({ method: "POST" })
     }) => data,
   )
   .handler(async ({ data }) => {
+    const log = cardLogger.child({ fn: "moveCard", cardId: data.cardId, status: data.status, priority: data.priority });
+    log.info("moving card");
     const db = getDb();
     const { cardId, status, position, boardId, priority } = data;
 
@@ -125,9 +136,10 @@ export const moveCard = createServerFn({ method: "POST" })
 
       await invalidateBoardCache(boardId);
 
+      log.info("card moved");
       return { success: true };
     } catch (error) {
-      console.error("moveCard error:", error);
+      log.error({ err: error }, "failed to move card");
       throw error;
     }
   });
@@ -142,6 +154,8 @@ export const updateCard = createServerFn({ method: "POST" })
     return result.data;
   })
   .handler(async ({ data }) => {
+    const log = cardLogger.child({ fn: "updateCard", cardId: data.id });
+    log.info({ title: data.title, priority: data.priority, status: data.status }, "updating card");
     const db = getDb();
     const { id, tags, priority, status, ...updates } = data;
 
@@ -170,6 +184,7 @@ export const updateCard = createServerFn({ method: "POST" })
 
     await invalidateCacheForCard(db, id);
 
+    log.info("card updated");
     return { success: true };
   });
 
@@ -177,6 +192,8 @@ export const updateCard = createServerFn({ method: "POST" })
 export const deleteCard = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string }) => data)
   .handler(async ({ data }) => {
+    const log = cardLogger.child({ fn: "deleteCard", cardId: data.id });
+    log.info("deleting card (soft delete)");
     const db = getDb();
 
     // Need to get card's boardId before soft delete for cache invalidation
@@ -189,5 +206,6 @@ export const deleteCard = createServerFn({ method: "POST" })
       await invalidateBoardCache(card.boardId);
     }
 
+    log.info("card deleted");
     return { success: true };
   });

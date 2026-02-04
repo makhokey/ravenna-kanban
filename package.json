@@ -73,6 +73,8 @@
     "format": "prettier --write .",
     "check-types": "turbo run check-types",
     "check": "bun run format && turbo run lint && turbo run check-types",
+    "test": "turbo run test",
+    "test:web": "bun --filter=@repo/web test",
     "db": "bun --filter=@repo/db run db",
     "ui:web": "bun --filter=@repo/web run ui",
     "d1:create": "bunx wrangler d1 create ravenna-kanban-db",

@@ -19,6 +19,11 @@
       "inputs": ["$TURBO_DEFAULT$", ".env"],
       "cache": false,
       "persistent": true
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "**/*.test.ts", "**/*.test.tsx"],
+      "outputs": []
     }
   }
 }

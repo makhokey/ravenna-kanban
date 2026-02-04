@@ -6,6 +6,7 @@ import { eq, isNull } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { getBoardSettingsFromRequest, type BoardSettings } from "~/lib/cookies.server";
 import { getDb } from "~/lib/db";
+import { boardLogger } from "~/lib/logger";
 import { cacheKeys, getCached } from "./cache-utils";
 
 import type { CardData, NormalizedBoard, StatusValue } from "~/types/board-types";
@@ -70,6 +71,8 @@ function normalizeBoard(board: BoardWithRelations): NormalizedBoard {
 export const getBoard = createServerFn({ method: "GET" })
   .inputValidator((data: { id: string }) => data)
   .handler(async ({ data }) => {
+    const log = boardLogger.child({ fn: "getBoard", boardId: data.id });
+    log.info("fetching board");
     const db = getDb();
 
     const board = await db.query.boards.findFirst({
@@ -82,12 +85,16 @@ export const getBoard = createServerFn({ method: "GET" })
       },
     });
 
-    return board ? normalizeBoard(board) : null;
+    const result = board ? normalizeBoard(board) : null;
+    log.info({ cardCount: result?.cardsById ? Object.keys(result.cardsById).length : 0 }, "board fetched");
+    return result;
   });
 
 // Get first board (for default board navigation)
 export const getFirstBoard = createServerFn().handler(async () => {
-  return getCached(cacheKeys.boardList(), async () => {
+  const log = boardLogger.child({ fn: "getFirstBoard" });
+  log.info("fetching first board");
+  const result = await getCached(cacheKeys.boardList(), async () => {
     const db = getDb();
 
     const board = await db.query.boards.findFirst({
@@ -101,10 +108,14 @@ export const getFirstBoard = createServerFn().handler(async () => {
 
     return board ? normalizeBoard(board) : null;
   });
+  log.info({ boardId: result?.id ?? null }, "first board fetched");
+  return result;
 });
 
 // Create default board (for initial setup)
 export const createDefaultBoard = createServerFn().handler(async () => {
+  const log = boardLogger.child({ fn: "createDefaultBoard" });
+  log.info("creating default board");
   const db = getDb();
   const boardId = uuidv4();
   const now = new Date();
@@ -116,12 +127,17 @@ export const createDefaultBoard = createServerFn().handler(async () => {
     updatedAt: now,
   });
 
+  log.info({ boardId }, "default board created");
   return { id: boardId };
 });
 
 // Get board settings from cookies
 export const getBoardSettings = createServerFn({ method: "GET" }).handler(
   async (): Promise<BoardSettings> => {
-    return getBoardSettingsFromRequest();
+    const log = boardLogger.child({ fn: "getBoardSettings" });
+    log.debug("reading board settings from cookies");
+    const settings = getBoardSettingsFromRequest();
+    log.debug({ viewMode: settings.viewMode, groupBy: settings.groupBy }, "board settings loaded");
+    return settings;
   },
 );
