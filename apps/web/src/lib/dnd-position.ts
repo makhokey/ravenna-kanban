@@ -1,5 +1,5 @@
 import { generateKeyBetween } from "fractional-indexing";
-import type { CardData, NormalizedBoard } from "~/types/board";
+import type { CardData, NormalizedBoard, StatusValue } from "~/types/board";
 
 type DropPositionResult = {
   newPosition: string;
@@ -13,11 +13,38 @@ type DropPositionResult = {
 export function calculateDropPosition(
   board: NormalizedBoard,
   activeId: string,
-  targetColumnId: string,
+  targetStatus: StatusValue,
   overId: string,
   overCard: CardData | undefined,
 ): DropPositionResult {
-  const targetCardIds = board.cardIdsByColumn[targetColumnId] ?? [];
+  const targetCardIds = board.cardIdsByStatus[targetStatus] ?? [];
+  return calculateDropPositionInGroup(board, activeId, targetCardIds, overId, overCard);
+}
+
+/**
+ * Calculate drop position for priority-based grouping.
+ */
+export function calculateDropPositionByPriority(
+  board: NormalizedBoard,
+  activeId: string,
+  priorityGroup: string,
+  overId: string,
+  overCard: CardData | undefined,
+): DropPositionResult {
+  const targetCardIds = board.cardIdsByPriority[priorityGroup] ?? [];
+  return calculateDropPositionInGroup(board, activeId, targetCardIds, overId, overCard);
+}
+
+/**
+ * Generic position calculation for any card group.
+ */
+function calculateDropPositionInGroup(
+  board: NormalizedBoard,
+  activeId: string,
+  targetCardIds: string[],
+  overId: string,
+  overCard: CardData | undefined,
+): DropPositionResult {
 
   if (overCard) {
     // Dropped on a card - insert relative to it
@@ -62,30 +89,66 @@ export function calculateDropPosition(
 export function computeOptimisticCardOrder(
   board: NormalizedBoard,
   activeId: string,
-  sourceColumnId: string,
-  targetColumnId: string,
+  sourceStatus: StatusValue,
+  targetStatus: StatusValue,
   insertIndex: number,
 ): Record<string, string[]> {
-  const sourceCardIds = board.cardIdsByColumn[sourceColumnId] ?? [];
-  const targetCardIds = board.cardIdsByColumn[targetColumnId] ?? [];
+  const sourceCardIds = board.cardIdsByStatus[sourceStatus] ?? [];
+  const targetCardIds = board.cardIdsByStatus[targetStatus] ?? [];
 
-  const newOrder: Record<string, string[]> = { ...board.cardIdsByColumn };
+  const newOrder: Record<string, string[]> = { ...board.cardIdsByStatus };
 
-  if (sourceColumnId === targetColumnId) {
-    // Same column reorder
+  if (sourceStatus === targetStatus) {
+    // Same status group reorder
     const currentIds = [...sourceCardIds];
     const currentIndex = currentIds.indexOf(activeId);
     currentIds.splice(currentIndex, 1);
     // Adjust insert index if we removed from before
     const adjustedIndex = currentIndex < insertIndex ? insertIndex - 1 : insertIndex;
     currentIds.splice(adjustedIndex, 0, activeId);
-    newOrder[sourceColumnId] = currentIds;
+    newOrder[sourceStatus] = currentIds;
   } else {
-    // Cross-column move
-    newOrder[sourceColumnId] = sourceCardIds.filter((id) => id !== activeId);
+    // Cross-status move
+    newOrder[sourceStatus] = sourceCardIds.filter((id) => id !== activeId);
     const newTargetIds = [...targetCardIds];
     newTargetIds.splice(insertIndex, 0, activeId);
-    newOrder[targetColumnId] = newTargetIds;
+    newOrder[targetStatus] = newTargetIds;
+  }
+
+  return newOrder;
+}
+
+/**
+ * Compute optimistic card order for priority-based reordering.
+ * Handles both same-group reorder and cross-group moves.
+ */
+export function computeOptimisticCardOrderByPriority(
+  board: NormalizedBoard,
+  activeId: string,
+  targetPriority: string,
+  insertIndex: number,
+  sourcePriority?: string,
+): Record<string, string[]> {
+  const actualSource = sourcePriority ?? targetPriority;
+  const newOrder: Record<string, string[]> = { ...board.cardIdsByPriority };
+
+  if (actualSource === targetPriority) {
+    // Same group reorder
+    const cardIds = board.cardIdsByPriority[targetPriority] ?? [];
+    const currentIds = [...cardIds];
+    const currentIndex = currentIds.indexOf(activeId);
+    currentIds.splice(currentIndex, 1);
+    const adjustedIndex = currentIndex < insertIndex ? insertIndex - 1 : insertIndex;
+    currentIds.splice(adjustedIndex, 0, activeId);
+    newOrder[targetPriority] = currentIds;
+  } else {
+    // Cross-group move
+    newOrder[actualSource] = (board.cardIdsByPriority[actualSource] ?? []).filter(
+      (id) => id !== activeId,
+    );
+    const targetIds = [...(board.cardIdsByPriority[targetPriority] ?? [])];
+    targetIds.splice(insertIndex, 0, activeId);
+    newOrder[targetPriority] = targetIds;
   }
 
   return newOrder;

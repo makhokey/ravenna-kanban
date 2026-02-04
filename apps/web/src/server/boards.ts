@@ -1,34 +1,53 @@
-import { boards, cards, columns } from "@repo/db/schema";
-import type { Board, Card, Column } from "@repo/db/types";
+import { boards, cards } from "@repo/db/schema";
+import type { Board, Card } from "@repo/db/types";
 import { createServerFn } from "@tanstack/react-start";
 import { eq, isNull } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { getDb } from "~/lib/db";
 import { cacheKeys, getCached } from "./cache";
 
-import type { CardData, ColumnData, NormalizedBoard } from "~/types/board";
+import type { CardData, NormalizedBoard, StatusValue } from "~/types/board";
+
+// Static status and priority orders
+const STATUS_ORDER: StatusValue[] = ["backlog", "todo", "in_progress", "review", "done"];
+const PRIORITY_ORDER = ["urgent", "high", "medium", "low", "none"] as const;
 
 // Type for Drizzle query result with relations
 type BoardWithRelations = Board & {
-  columns: Array<Column & { cards: Card[] }>;
+  cards: Card[];
 };
 
 // Normalize board data for O(1) lookups
 function normalizeBoard(board: BoardWithRelations): NormalizedBoard {
-  const columnsById: Record<string, ColumnData> = {};
   const cardsById: Record<string, CardData> = {};
-  const cardIdsByColumn: Record<string, string[]> = {};
-  const columnIds: string[] = [];
+  const cardIdsByStatus: Record<StatusValue, string[]> = {
+    backlog: [],
+    todo: [],
+    in_progress: [],
+    review: [],
+    done: [],
+  };
+  const cardIdsByPriority: Record<string, string[]> = {
+    urgent: [],
+    high: [],
+    medium: [],
+    low: [],
+    none: [],
+  };
 
-  for (const col of board.columns) {
-    columnIds.push(col.id);
-    const { cards, ...columnData } = col;
-    columnsById[col.id] = columnData;
-    cardIdsByColumn[col.id] = cards.map((c) => c.id); // Already sorted by Drizzle
+  for (const card of board.cards) {
+    cardsById[card.id] = card;
 
-    for (const card of cards) {
-      cardsById[card.id] = card;
+    // Group by status
+    const status = (card.status as StatusValue) || "backlog";
+    cardIdsByStatus[status].push(card.id);
+
+    // Group by priority
+    const priority = card.priority || "none";
+    if (!cardIdsByPriority[priority]) {
+      cardIdsByPriority[priority] = [];
     }
+    cardIdsByPriority[priority].push(card.id);
   }
 
   return {
@@ -36,14 +55,15 @@ function normalizeBoard(board: BoardWithRelations): NormalizedBoard {
     name: board.name,
     createdAt: board.createdAt,
     updatedAt: board.updatedAt,
-    columnIds,
-    columnsById,
     cardsById,
-    cardIdsByColumn,
+    statusOrder: STATUS_ORDER,
+    cardIdsByStatus,
+    priorityOrder: [...PRIORITY_ORDER],
+    cardIdsByPriority,
   };
 }
 
-// Get board with columns and cards
+// Get board with cards
 export const getBoard = createServerFn({ method: "GET" })
   .inputValidator((data: { id: string }) => data)
   .handler(async ({ data }) => {
@@ -52,14 +72,9 @@ export const getBoard = createServerFn({ method: "GET" })
     const board = await db.query.boards.findFirst({
       where: eq(boards.id, data.id),
       with: {
-        columns: {
-          orderBy: (cols, { asc }) => [asc(cols.position)],
-          with: {
-            cards: {
-              where: isNull(cards.deletedAt),
-              orderBy: (c, { asc }) => [asc(c.position)],
-            },
-          },
+        cards: {
+          where: isNull(cards.deletedAt),
+          orderBy: (c, { asc }) => [asc(c.position)],
         },
       },
     });
@@ -74,14 +89,9 @@ export const getFirstBoard = createServerFn().handler(async () => {
 
     const board = await db.query.boards.findFirst({
       with: {
-        columns: {
-          orderBy: (cols, { asc }) => [asc(cols.position)],
-          with: {
-            cards: {
-              where: isNull(cards.deletedAt),
-              orderBy: (c, { asc }) => [asc(c.position)],
-            },
-          },
+        cards: {
+          where: isNull(cards.deletedAt),
+          orderBy: (c, { asc }) => [asc(c.position)],
         },
       },
     });
@@ -102,19 +112,6 @@ export const createDefaultBoard = createServerFn().handler(async () => {
     createdAt: now,
     updatedAt: now,
   });
-
-  // Create default columns
-  const defaultColumns = ["To Do", "In Progress", "Done"];
-  for (let i = 0; i < defaultColumns.length; i++) {
-    await db.insert(columns).values({
-      id: uuidv4(),
-      name: defaultColumns[i]!,
-      position: i,
-      boardId,
-      createdAt: now,
-      updatedAt: now,
-    });
-  }
 
   return { id: boardId };
 });

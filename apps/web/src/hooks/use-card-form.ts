@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import {
   cardFormSchema,
-  getColumnStatus,
   safeParseJsonTags,
   type CardFormOutput,
   type CardFormValues,
@@ -12,7 +11,7 @@ import {
   type StatusValue,
 } from "~/components/shared/card-schema";
 import type { CardEditorState } from "~/atoms/board";
-import type { CardData, ColumnData } from "~/types/board";
+import type { CardData } from "~/types/board";
 import { useBoard } from "./use-board";
 import { useCreateCard, useUpdateCard } from "./use-cards";
 
@@ -38,10 +37,6 @@ export function useCardForm({
       ? (board?.cardsById[editorState.cardId] ?? null)
       : null;
 
-  const column: ColumnData | null = editorState.columnId
-    ? (board?.columnsById[editorState.columnId] ?? null)
-    : null;
-
   const getDefaultValues = useCallback((): CardFormValues => {
     if (existingCard) {
       const tags = safeParseJsonTags(existingCard.tags);
@@ -53,27 +48,26 @@ export function useCardForm({
         tags,
       };
     }
-    // Auto-select status based on column name for new cards
-    const columnStatus = column ? getColumnStatus(column.name) : null;
+    // Use status from editor state for new cards
     return {
       title: "",
       description: "",
       priority: "no priority",
-      status: columnStatus ?? "backlog",
+      status: editorState.status ?? "backlog",
       tags: [],
     };
-  }, [existingCard, column]);
+  }, [existingCard, editorState.status]);
 
   const handleFormSubmit = useCallback(
     (data: CardFormOutput) => {
-      if (editorState.mode === "create" && editorState.columnId) {
+      if (editorState.mode === "create" && board) {
         createCard.mutate(
           {
             title: data.title,
             description: data.description,
-            columnId: editorState.columnId,
-            priority: data.priority,
+            boardId: board.id,
             status: data.status,
+            priority: data.priority,
             tags: data.tags,
           },
           { onSuccess: onClose },
@@ -97,7 +91,7 @@ export function useCardForm({
         );
       }
     },
-    [editorState, createCard, updateCard, onClose],
+    [editorState, board, createCard, updateCard, onClose],
   );
 
   const form = useForm({
@@ -187,7 +181,7 @@ export function useCardForm({
     if (!autoSave || editorState.mode !== "edit" || !editorState.cardId) return;
     const trimmed = value.trimEnd();
     if (trimmed !== (existingCard?.description ?? "")) {
-      updateCard.mutate({ id: editorState.cardId, description: trimmed || null });
+      updateCard.mutate({ id: editorState.cardId, description: trimmed || undefined });
     }
   }, 500);
 

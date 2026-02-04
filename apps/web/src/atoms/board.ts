@@ -1,9 +1,12 @@
 import { atom } from "jotai";
-import type { CardData } from "~/types/board";
+import type { CardData, GroupBy, StatusValue } from "~/types/board";
 
 // View mode
 export type ViewMode = "kanban" | "table";
 export const viewModeAtom = atom<ViewMode>("kanban");
+
+// Group by mode (status or priority)
+export const groupByAtom = atom<GroupBy>("status");
 
 // Filters - empty set means "show all"
 export const priorityFiltersAtom = atom<Set<string>>(new Set<string>());
@@ -14,7 +17,7 @@ export type CardEditorState = {
   open: boolean;
   mode: "create" | "edit";
   cardId?: string;
-  columnId?: string;
+  status?: StatusValue;
 };
 
 const initialEditorState: CardEditorState = { open: false, mode: "create" };
@@ -29,5 +32,12 @@ export const activeCardAtom = atom<CardData | null>(null);
 export const tempCardOrderAtom = atom<Record<string, string[]> | null>(null);
 
 export const activeCardIdAtom = atom((get) => get(activeCardAtom)?.id ?? null);
-export const activeColumnIdAtom = atom((get) => get(activeCardAtom)?.columnId ?? null);
+
+// Get the active card's group key based on current groupBy mode
+export const activeGroupKeyAtom = atom((get) => {
+  const card = get(activeCardAtom);
+  const groupBy = get(groupByAtom);
+  if (!card) return null;
+  return groupBy === "status" ? card.status : (card.priority || "none");
+});
 

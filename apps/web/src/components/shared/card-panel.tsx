@@ -41,8 +41,17 @@ export function CardPanel() {
     }
   };
 
-  // Navigation between cards in the same column
-  const cardIds = board?.cardIdsByColumn[panel.columnId ?? ""] ?? [];
+  // Get the card's status for navigation
+  const card = panel.cardId ? board?.cardsById[panel.cardId] : null;
+  const cardStatus = (card?.status ?? panel.status ?? "backlog") as
+    | "backlog"
+    | "todo"
+    | "in_progress"
+    | "review"
+    | "done";
+
+  // Navigation between cards in the same status group
+  const cardIds = board?.cardIdsByStatus[cardStatus] ?? [];
   const currentIndex = cardIds.indexOf(panel.cardId ?? "");
   const canGoUp = currentIndex > 0;
   const canGoDown = currentIndex >= 0 && currentIndex < cardIds.length - 1;

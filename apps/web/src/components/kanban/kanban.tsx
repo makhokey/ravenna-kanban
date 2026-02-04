@@ -17,21 +17,26 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useRef } from "react";
 import { useBoard } from "~/hooks/use-board";
 import { useMoveCard } from "~/hooks/use-cards";
-import { calculateDropPosition, computeOptimisticCardOrder } from "~/lib/dnd-position";
-import { activeCardAtom, tempCardOrderAtom } from "~/atoms/board";
-import type { CardData } from "~/types/board";
+import {
+  calculateDropPosition,
+  calculateDropPositionByPriority,
+  computeOptimisticCardOrder,
+  computeOptimisticCardOrderByPriority,
+} from "~/lib/dnd-position";
+import { activeCardAtom, groupByAtom, tempCardOrderAtom } from "~/atoms/board";
+import type { CardData, StatusValue } from "~/types/board";
 import { isCardDragData } from "~/types/dnd";
 import { Column } from "./column";
 import { Card } from "./card";
 
-function getTargetColumnId(over: {
+function getTargetStatus(over: {
   id: string | number;
   data: { current?: unknown };
-}): string | null {
+}): StatusValue | null {
   const overCard = (over.data.current as { card?: CardData })?.card;
-  if (overCard) return overCard.columnId;
+  if (overCard) return (overCard.status as StatusValue) || "backlog";
   if ((over.data.current as { type?: string })?.type === "column") {
-    return over.id as string;
+    return over.id as StatusValue;
   }
   return null;
 }
@@ -39,6 +44,7 @@ function getTargetColumnId(over: {
 export function Kanban() {
   const { data: board } = useBoard();
   const moveCard = useMoveCard();
+  const groupBy = useAtomValue(groupByAtom);
 
   const setActiveCard = useSetAtom(activeCardAtom);
   const setTempCardOrder = useSetAtom(tempCardOrderAtom);
@@ -55,6 +61,18 @@ export function Kanban() {
   // Ref for collision detection state - caches last over ID to prevent flickering
   const lastOverIdRef = useRef<string | null>(null);
 
+  // Get card IDs by group key based on groupBy mode
+  const getCardIdsByGroup = useCallback(
+    (groupKey: string): string[] => {
+      if (!board) return [];
+      if (groupBy === "status") {
+        return board.cardIdsByStatus[groupKey as StatusValue] ?? [];
+      }
+      return board.cardIdsByPriority[groupKey] ?? [];
+    },
+    [board, groupBy],
+  );
+
   // Custom collision detection optimized for multiple containers
   const collisionDetectionStrategy: CollisionDetection = useCallback(
     (args) => {
@@ -66,13 +84,13 @@ export function Kanban() {
       let overId = getFirstCollision(intersections, "id") as string | null;
 
       if (overId != null) {
-        // If over a column, find the closest card within it
-        const columnCardIds = board?.cardIdsByColumn[overId];
-        if (columnCardIds && columnCardIds.length > 0) {
+        // If over a column/group, find the closest card within it
+        const groupCardIds = getCardIdsByGroup(overId);
+        if (groupCardIds.length > 0) {
           // Get card containers in this column
           const cardContainers = args.droppableContainers.filter(
             (container) =>
-              container.id !== overId && columnCardIds.includes(container.id as string),
+              container.id !== overId && groupCardIds.includes(container.id as string),
           );
 
           // Check if pointer is below all cards in the column
@@ -103,7 +121,7 @@ export function Kanban() {
       // Return last match to prevent flickering
       return lastOverIdRef.current ? [{ id: lastOverIdRef.current }] : [];
     },
-    [board],
+    [getCardIdsByGroup],
   );
 
   if (!board) {
@@ -133,46 +151,96 @@ export function Kanban() {
     const draggedCard = board.cardsById[activeId];
     if (!draggedCard) return;
 
-    // Determine target column
     const overCard = over.data.current?.card as CardData | undefined;
-    const targetColumnId = getTargetColumnId(over);
-    if (!targetColumnId) return;
 
-    // Calculate new position using fractional indexing
-    const { newPosition, insertIndex } = calculateDropPosition(
-      board,
-      activeId,
-      targetColumnId,
-      overId,
-      overCard,
-    );
+    if (groupBy === "status") {
+      // Status view: allow cross-status moves (changes card status)
+      const targetStatus = getTargetStatus(over);
+      if (!targetStatus) return;
 
-    // Only mutate if something changed
-    if (draggedCard.columnId !== targetColumnId || draggedCard.position !== newPosition) {
-      // Compute optimistic card order immediately to prevent flicker
-      const newOrder = computeOptimisticCardOrder(
+      const sourceStatus = (draggedCard.status as StatusValue) || "backlog";
+
+      const { newPosition, insertIndex } = calculateDropPosition(
         board,
         activeId,
-        draggedCard.columnId,
-        targetColumnId,
-        insertIndex,
+        targetStatus,
+        overId,
+        overCard,
       );
 
-      setTempCardOrder(newOrder);
+      if (sourceStatus !== targetStatus || draggedCard.position !== newPosition) {
+        const newOrder = computeOptimisticCardOrder(
+          board,
+          activeId,
+          sourceStatus,
+          targetStatus,
+          insertIndex,
+        );
 
-      moveCard.mutate(
-        {
-          cardId: activeId,
-          columnId: targetColumnId,
-          position: newPosition,
-        },
-        {
-          onSettled: () => {
-            // Clear temp order after mutation completes (success or error)
-            setTempCardOrder(null);
+        setTempCardOrder(newOrder);
+
+        moveCard.mutate(
+          {
+            cardId: activeId,
+            status: targetStatus,
+            position: newPosition,
+            boardId: board.id,
           },
-        },
+          {
+            onSettled: () => setTempCardOrder(null),
+          },
+        );
+      }
+    } else {
+      // Priority view: allow cross-priority moves (changes card priority)
+      const sourcePriority = draggedCard.priority || "none";
+
+      // Determine target priority group
+      let targetPriority: string;
+      if (overCard) {
+        targetPriority = overCard.priority || "none";
+      } else if ((over.data.current as { type?: string })?.type === "column") {
+        targetPriority = over.id as string;
+      } else {
+        return;
+      }
+
+      // Calculate position in target priority group
+      const { newPosition, insertIndex } = calculateDropPositionByPriority(
+        board,
+        activeId,
+        targetPriority,
+        overId,
+        overCard,
       );
+
+      if (sourcePriority !== targetPriority || draggedCard.position !== newPosition) {
+        const newOrder = computeOptimisticCardOrderByPriority(
+          board,
+          activeId,
+          targetPriority,
+          insertIndex,
+          sourcePriority,
+        );
+
+        setTempCardOrder(newOrder);
+
+        // Convert "none" back to null for DB
+        const newPriorityValue = targetPriority === "none" ? null : targetPriority;
+
+        moveCard.mutate(
+          {
+            cardId: activeId,
+            status: (draggedCard.status as StatusValue) || "backlog",
+            position: newPosition,
+            boardId: board.id,
+            priority: newPriorityValue,
+          },
+          {
+            onSettled: () => setTempCardOrder(null),
+          },
+        );
+      }
     }
   };
 
@@ -180,6 +248,12 @@ export function Kanban() {
     setActiveCard(null);
     setTempCardOrder(null);
   };
+
+  // Get group order and card IDs based on groupBy mode
+  const groupOrder =
+    groupBy === "status" ? board.statusOrder : board.priorityOrder;
+  const cardIdsByGroup: Record<string, string[]> =
+    groupBy === "status" ? board.cardIdsByStatus : board.cardIdsByPriority;
 
   return (
     <DndContext
@@ -195,14 +269,18 @@ export function Kanban() {
       onDragCancel={handleDragCancel}
     >
       <div className="flex h-full overflow-x-auto overscroll-x-contain px-2 [-webkit-overflow-scrolling:touch]">
-        {board.columnIds.map((id) => (
-          <Column
-            key={id}
-            column={board.columnsById[id]!}
-            cardIds={tempCardOrder?.[id] ?? board.cardIdsByColumn[id] ?? []}
-            cardsById={board.cardsById}
-          />
-        ))}
+        {groupOrder.map((groupKey) => {
+          const key = groupKey as string;
+          return (
+            <Column
+              key={key}
+              groupKey={key}
+              groupBy={groupBy}
+              cardIds={tempCardOrder?.[key] ?? cardIdsByGroup[key] ?? []}
+              cardsById={board.cardsById}
+            />
+          );
+        })}
       </div>
 
       <DragOverlay dropAnimation={{ duration: 250, easing: "ease" }}>

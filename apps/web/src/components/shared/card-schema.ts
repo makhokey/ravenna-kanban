@@ -120,21 +120,6 @@ export const safeParseJsonTags = (jsonString: string | null | undefined): string
   }
 };
 
-// Map column name to status value
-const COLUMN_STATUS_MAP: Record<string, StatusValue> = {
-  backlog: "backlog",
-  todo: "todo",
-  to_do: "todo",
-  in_progress: "in_progress",
-  review: "review",
-  done: "done",
-};
-
-export const getColumnStatus = (columnName: string): StatusValue | null => {
-  const normalized = columnName.toLowerCase().replace(/\s+/g, "_");
-  return COLUMN_STATUS_MAP[normalized] ?? null;
-};
-
 // ============================================================================
 // Form Schema (Frontend)
 // ============================================================================
@@ -171,12 +156,9 @@ export type CardFormOutput = z.output<typeof cardFormSchema>;
 export const createCardServerSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
-  columnId: z.string().min(1, "Column ID is required"),
+  boardId: z.string().min(1, "Board ID is required"),
+  status: z.enum(["backlog", "todo", "in_progress", "review", "done"]).default("backlog"),
   priority: z.enum(["low", "medium", "high", "urgent"]).nullable().optional(),
-  status: z
-    .enum(["backlog", "todo", "in_progress", "review", "done"])
-    .nullable()
-    .optional(),
   tags: z.array(z.string()).nullable().optional(),
 });
 

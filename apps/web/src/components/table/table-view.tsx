@@ -14,6 +14,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 import {
   getPriorityOption,
+  getStatusOption,
   safeParseJsonTags,
   TAG_OPTIONS,
 } from "~/components/shared/card-schema";
@@ -21,6 +22,7 @@ import { useBoard } from "~/hooks/use-board";
 import { useDeleteCard } from "~/hooks/use-cards";
 import { useFilteredCards } from "~/hooks/use-filtered-cards";
 import { dialogAtom, priorityFiltersAtom, tagFiltersAtom } from "~/atoms/board";
+import type { StatusValue } from "~/types/board";
 
 const priorityColors = {
   low: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
@@ -39,13 +41,13 @@ export function TableView() {
   const priorityFilters = useAtomValue(priorityFiltersAtom);
   const tagFilters = useAtomValue(tagFiltersAtom);
 
-  // Flatten all cards from all columns
+  // Flatten all cards from all status groups
   const allCards = useMemo(() => {
     if (!board) return [];
-    return board.columnIds.flatMap((colId) =>
-      (board.cardIdsByColumn[colId] ?? []).map((cardId) => ({
+    return board.statusOrder.flatMap((status) =>
+      (board.cardIdsByStatus[status] ?? []).map((cardId) => ({
         ...board.cardsById[cardId]!,
-        columnName: board.columnsById[colId]!.name,
+        statusLabel: getStatusOption(status).label,
       })),
     );
   }, [board]);
@@ -70,7 +72,7 @@ export function TableView() {
           <TableRow>
             <TableHead className="w-[80px]">ID</TableHead>
             <TableHead className="w-[300px]">Title</TableHead>
-            <TableHead>Column</TableHead>
+            <TableHead>Status</TableHead>
             <TableHead>Priority</TableHead>
             <TableHead>Tags</TableHead>
             <TableHead className="w-[100px]">Actions</TableHead>
@@ -104,7 +106,7 @@ export function TableView() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{card.columnName}</Badge>
+                    <Badge variant="outline">{card.statusLabel}</Badge>
                   </TableCell>
                   <TableCell>
                     {card.priority &&
@@ -150,7 +152,7 @@ export function TableView() {
                             open: true,
                             mode: "edit",
                             cardId: card.id,
-                            columnId: card.columnId,
+                            status: (card.status as StatusValue) ?? "backlog",
                           })
                         }
                       >

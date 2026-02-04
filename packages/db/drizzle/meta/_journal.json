@@ -36,6 +36,13 @@
       "when": 1770073308869,
       "tag": "0004_large_vampiro",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1770200000000,
+      "tag": "0005_remove_columns",
+      "breakpoints": true
     }
   ]
 }

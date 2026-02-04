@@ -22,7 +22,7 @@ function SetupPage() {
       <div className="text-center">
         <h2 className="text-2xl font-bold">Welcome to Ravenna Kanban</h2>
         <p className="text-muted-foreground mt-2">
-          Get started by creating your first board with default columns.
+          Get started by creating your first board.
         </p>
       </div>
 

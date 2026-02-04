@@ -4,45 +4,61 @@ import { cn } from "@repo/ui/lib/utils";
 import { useAtomValue, useSetAtom } from "jotai";
 import { Plus } from "lucide-react";
 import { useMemo } from "react";
-import { getColumnStatus } from "~/components/shared/card-schema";
+import { STATUS_OPTIONS, PRIORITY_OPTIONS } from "~/components/shared/card-schema";
 import { StatusIcon } from "~/components/shared/status-icon";
+import { PriorityIcon } from "~/components/shared/priority-icon";
 import { useFilteredCardIds } from "~/hooks/use-filtered-cards";
 import {
-  activeColumnIdAtom,
+  activeGroupKeyAtom,
   dialogAtom,
   priorityFiltersAtom,
   tagFiltersAtom,
 } from "~/atoms/board";
-import type { CardData, ColumnData } from "~/types/board";
+import type { CardData, GroupBy, StatusValue } from "~/types/board";
 import { VirtualizedCardList } from "./virtualized-card-list";
 
 interface ColumnProps {
-  column: ColumnData;
+  groupKey: string;
+  groupBy: GroupBy;
   cardIds: string[];
   cardsById: Record<string, CardData>;
 }
 
-export function Column({ column, cardIds, cardsById }: ColumnProps) {
+// Get display name for a group
+function getGroupName(groupKey: string, groupBy: GroupBy): string {
+  if (groupBy === "status") {
+    const option = STATUS_OPTIONS.find((opt) => opt.value === groupKey);
+    return option?.label ?? groupKey;
+  }
+  if (groupKey === "none") return "No Priority";
+  const option = PRIORITY_OPTIONS.find((opt) => opt.value === groupKey);
+  return option?.label ?? groupKey;
+}
+
+export function Column({ groupKey, groupBy, cardIds, cardsById }: ColumnProps) {
   const setDialog = useSetAtom(dialogAtom);
   const priorityFilters = useAtomValue(priorityFiltersAtom);
   const tagFilters = useAtomValue(tagFiltersAtom);
 
   // Make the column a droppable target for cross-column moves
   const { setNodeRef: setDroppableRef } = useDroppable({
-    id: column.id,
-    data: { type: "column", columnId: column.id },
+    id: groupKey,
+    data: { type: "column", groupKey },
   });
 
-  // Get current drag state - only highlight for cross-column drops
+  // Get current drag state - only highlight for cross-group drops
   const { over } = useDndContext();
-  const activeColumnId = useAtomValue(activeColumnIdAtom);
-  const isOverThisColumn =
-    over?.id === column.id ||
-    (over?.data.current as { card?: { columnId: string } })?.card?.columnId === column.id;
-  const isOver = isOverThisColumn && activeColumnId !== column.id;
+  const activeGroupKey = useAtomValue(activeGroupKeyAtom);
+  const overCardData = over?.data.current as { card?: { status: string; priority: string | null } } | undefined;
+  const isOverThisGroup =
+    over?.id === groupKey ||
+    (groupBy === "status"
+      ? overCardData?.card?.status === groupKey
+      : (overCardData?.card?.priority || "none") === groupKey);
+  const isOver = isOverThisGroup && activeGroupKey !== groupKey;
 
-  // Get status icon for column header
-  const columnStatus = useMemo(() => getColumnStatus(column.name), [column.name]);
+  // Get display name for the column header
+  const groupName = useMemo(() => getGroupName(groupKey, groupBy), [groupKey, groupBy]);
 
   // Filter cards based on priority and tag filters
   const filteredCardIds = useFilteredCardIds(
@@ -51,6 +67,9 @@ export function Column({ column, cardIds, cardsById }: ColumnProps) {
     priorityFilters,
     tagFilters,
   );
+
+  // Only show add button in status view
+  const showAddButton = groupBy === "status";
 
   return (
     <div
@@ -63,19 +82,27 @@ export function Column({ column, cardIds, cardsById }: ColumnProps) {
       {/* Column Header */}
       <div className="flex items-center justify-between px-4">
         <div className="flex items-center gap-2">
-          {columnStatus && <StatusIcon status={columnStatus} />}
-          <p className="text-sm font-medium">{column.name}</p>
+          {groupBy === "status" ? (
+            <StatusIcon status={groupKey as StatusValue} />
+          ) : (
+            <PriorityIcon priority={groupKey === "none" ? null : groupKey} />
+          )}
+          <p className="text-sm font-medium">{groupName}</p>
           <span className="text-muted-foreground text-xs">{filteredCardIds.length}</span>
         </div>
 
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => setDialog({ open: true, mode: "create", columnId: column.id })}
-          aria-label="Add card"
-        >
-          <Plus className="size-3" />
-        </Button>
+        {showAddButton && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() =>
+              setDialog({ open: true, mode: "create", status: groupKey as StatusValue })
+            }
+            aria-label="Add card"
+          >
+            <Plus className="size-3" />
+          </Button>
+        )}
       </div>
 
       <div className="group/column flex flex-1 flex-col overflow-hidden">

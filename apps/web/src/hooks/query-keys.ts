@@ -10,7 +10,6 @@ export const boardKeys = {
   all: ["boards"] as const,
   lists: () => [...boardKeys.all, "list"] as const,
   detail: (id: string) => [...boardKeys.all, id] as const,
-  columns: (boardId: string) => [...boardKeys.all, boardId, "columns"] as const,
   cards: (boardId: string) => [...boardKeys.all, boardId, "cards"] as const,
   card: (boardId: string, cardId: string) =>
     [...boardKeys.cards(boardId), cardId] as const,
@@ -19,5 +18,4 @@ export const boardKeys = {
 // Type helpers for query key inference
 export type BoardKeys = typeof boardKeys;
 export type BoardDetailKey = ReturnType<typeof boardKeys.detail>;
-export type BoardColumnsKey = ReturnType<typeof boardKeys.columns>;
 export type BoardCardsKey = ReturnType<typeof boardKeys.cards>;

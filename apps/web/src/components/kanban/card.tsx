@@ -101,7 +101,7 @@ function CardComponent({
             open: true,
             mode: "edit",
             cardId: card.id,
-            columnId: card.columnId,
+            status: (card.status as "backlog" | "todo" | "in_progress" | "review" | "done") ?? "backlog",
           });
         }
       }}

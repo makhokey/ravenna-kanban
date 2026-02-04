@@ -1,5 +1,5 @@
 import type { Db } from "@repo/db";
-import { cards, columns, sequences } from "@repo/db/schema";
+import { cards, sequences } from "@repo/db/schema";
 import { createServerFn } from "@tanstack/react-start";
 import { and, eq, isNull } from "drizzle-orm";
 import { generateKeyBetween } from "fractional-indexing";
@@ -11,26 +11,18 @@ import {
 import { getDb } from "~/lib/db";
 import { invalidateBoardCache } from "./cache";
 
-// Helper to invalidate cache for a given column
-async function invalidateCacheForColumn(db: Db, columnId: string): Promise<void> {
-  const [column] = await db.select().from(columns).where(eq(columns.id, columnId));
-  if (column) {
-    await invalidateBoardCache(column.boardId);
-  }
-}
-
-// Helper to invalidate cache for a card (looks up column from card)
+// Helper to invalidate cache for a card's board
 async function invalidateCacheForCard(db: Db, cardId: string): Promise<void> {
   const [card] = await db.select().from(cards).where(eq(cards.id, cardId));
   if (card) {
-    await invalidateCacheForColumn(db, card.columnId);
+    await invalidateBoardCache(card.boardId);
   }
 }
 
 // List cards with optional filters
 export const getCards = createServerFn({ method: "GET" })
   .inputValidator(
-    (data: { columnId?: string; priority?: "low" | "medium" | "high" } | undefined) =>
+    (data: { boardId?: string; priority?: "low" | "medium" | "high" } | undefined) =>
       data,
   )
   .handler(async ({ data }) => {
@@ -38,7 +30,7 @@ export const getCards = createServerFn({ method: "GET" })
     // Always filter out soft-deleted cards
     const conditions = [isNull(cards.deletedAt)];
 
-    if (data?.columnId) conditions.push(eq(cards.columnId, data.columnId));
+    if (data?.boardId) conditions.push(eq(cards.boardId, data.boardId));
     if (data?.priority) conditions.push(eq(cards.priority, data.priority));
 
     return db
@@ -75,11 +67,11 @@ export const createCard = createServerFn({ method: "POST" })
       .set({ nextId: nextNumber + 1 })
       .where(eq(sequences.name, "card"));
 
-    // Get the last card's position in the column to append after it
+    // Get the last card's position in the status group to append after it
     const existingCards = await db
       .select({ position: cards.position })
       .from(cards)
-      .where(eq(cards.columnId, data.columnId))
+      .where(and(eq(cards.boardId, data.boardId), eq(cards.status, data.status)))
       .orderBy(cards.position);
 
     const lastPosition =
@@ -93,34 +85,48 @@ export const createCard = createServerFn({ method: "POST" })
       displayId,
       title: data.title,
       description: data.description ?? null,
-      columnId: data.columnId,
+      boardId: data.boardId,
       priority: data.priority ?? null,
-      status: data.status ?? null,
+      status: data.status,
       tags: data.tags && data.tags.length > 0 ? JSON.stringify(data.tags) : null,
       position,
       createdAt: now,
       updatedAt: now,
     });
 
-    await invalidateCacheForColumn(db, data.columnId);
+    await invalidateBoardCache(data.boardId);
 
     return { id, displayId };
   });
 
-// Move card (change column and/or position)
+// Move card (change status, position, and/or priority)
 export const moveCard = createServerFn({ method: "POST" })
-  .inputValidator((data: { cardId: string; columnId: string; position: string }) => data)
+  .inputValidator(
+    (data: {
+      cardId: string;
+      status: string;
+      position: string;
+      boardId: string;
+      priority?: string | null;
+    }) => data,
+  )
   .handler(async ({ data }) => {
     const db = getDb();
-    const { cardId, columnId, position } = data;
+    const { cardId, status, position, boardId, priority } = data;
 
     try {
-      await db
-        .update(cards)
-        .set({ columnId, position, updatedAt: new Date() })
-        .where(eq(cards.id, cardId));
+      const updateValues: Record<string, unknown> = {
+        status,
+        position,
+        updatedAt: new Date(),
+      };
+      if (priority !== undefined) {
+        updateValues.priority = priority;
+      }
 
-      await invalidateCacheForColumn(db, columnId);
+      await db.update(cards).set(updateValues).where(eq(cards.id, cardId));
+
+      await invalidateBoardCache(boardId);
 
       return { success: true };
     } catch (error) {
@@ -176,14 +182,14 @@ export const deleteCard = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const db = getDb();
 
-    // Need to get card's columnId before soft delete for cache invalidation
+    // Need to get card's boardId before soft delete for cache invalidation
     const [card] = await db.select().from(cards).where(eq(cards.id, data.id));
 
     // Soft delete: set deletedAt timestamp instead of removing
     await db.update(cards).set({ deletedAt: new Date() }).where(eq(cards.id, data.id));
 
     if (card) {
-      await invalidateCacheForColumn(db, card.columnId);
+      await invalidateBoardCache(card.boardId);
     }
 
     return { success: true };

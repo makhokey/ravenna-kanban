@@ -4,18 +4,29 @@ import { Popover, PopoverPopup, PopoverTrigger } from "@repo/ui/components/popov
 import { Toggle, ToggleGroup } from "@repo/ui/components/toggle-group";
 import { cn } from "@repo/ui/lib/utils";
 import { useAtom } from "jotai";
-import { FilterIcon, LayoutGrid, List, SlidersHorizontalIcon, X } from "lucide-react";
+import {
+  FilterIcon,
+  Layers,
+  LayoutGrid,
+  List,
+  Signal,
+  SlidersHorizontalIcon,
+  X,
+} from "lucide-react";
 import { PRIORITY_OPTIONS, TAG_OPTIONS } from "~/components/shared/card-schema";
 import {
+  groupByAtom,
   priorityFiltersAtom,
   tagFiltersAtom,
   viewModeAtom,
   type ViewMode,
 } from "~/atoms/board";
+import type { GroupBy } from "~/types/board";
 import { ThemeToggle } from "~/components/theme-toggle";
 
 export function FilterBar() {
   const [viewMode, setViewMode] = useAtom(viewModeAtom);
+  const [groupBy, setGroupBy] = useAtom(groupByAtom);
   const [priorityFilters, setPriorityFilters] = useAtom(priorityFiltersAtom);
   const [tagFilters, setTagFilters] = useAtom(tagFiltersAtom);
 
@@ -120,26 +131,50 @@ export function FilterBar() {
           }
         />
         <PopoverPopup align="end" className="w-48">
-          <div className="flex flex-col gap-2">
-            <span className="text-muted-foreground text-xs font-medium">View</span>
-            <ToggleGroup
-              value={[viewMode]}
-              onValueChange={(value) => {
-                const newValue = value[0] as ViewMode | undefined;
-                if (newValue) setViewMode(newValue);
-              }}
-              variant="outline"
-              className="w-full"
-            >
-              <Toggle value="kanban" className="flex-1 p-2">
-                <LayoutGrid className="size-4" />
-                Kanban
-              </Toggle>
-              <Toggle value="table" className="flex-1 p-2">
-                <List className="size-4" />
-                Table
-              </Toggle>
-            </ToggleGroup>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <span className="text-muted-foreground text-xs font-medium">View</span>
+              <ToggleGroup
+                value={[viewMode]}
+                onValueChange={(value) => {
+                  const newValue = value[0] as ViewMode | undefined;
+                  if (newValue) setViewMode(newValue);
+                }}
+                variant="outline"
+                className="w-full"
+              >
+                <Toggle value="kanban" className="flex-1 p-2">
+                  <LayoutGrid className="size-4" />
+                  Kanban
+                </Toggle>
+                <Toggle value="table" className="flex-1 p-2">
+                  <List className="size-4" />
+                  Table
+                </Toggle>
+              </ToggleGroup>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <span className="text-muted-foreground text-xs font-medium">Group By</span>
+              <ToggleGroup
+                value={[groupBy]}
+                onValueChange={(value) => {
+                  const newValue = value[0] as GroupBy | undefined;
+                  if (newValue) setGroupBy(newValue);
+                }}
+                variant="outline"
+                className="w-full"
+              >
+                <Toggle value="status" className="flex-1 p-2">
+                  <Layers className="size-4" />
+                  Status
+                </Toggle>
+                <Toggle value="priority" className="flex-1 p-2">
+                  <Signal className="size-4" />
+                  Priority
+                </Toggle>
+              </ToggleGroup>
+            </div>
           </div>
         </PopoverPopup>
       </Popover>
