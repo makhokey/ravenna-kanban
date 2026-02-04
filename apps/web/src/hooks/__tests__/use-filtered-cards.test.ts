@@ -1,15 +1,17 @@
-import { describe, expect, it } from "vitest";
 import { renderHook } from "@testing-library/react";
-import { useFilteredCards, useFilteredCardIds } from "../use-filtered-cards";
+import { describe, expect, it } from "vitest";
+import { useFilteredCardIds, useFilteredCards } from "../use-filtered-cards";
 
 // Test card factory
-function createCard(overrides: Partial<{
-  id: string;
-  priority: string;
-  tags: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}> = {}) {
+function createCard(
+  overrides: Partial<{
+    id: string;
+    priority: string;
+    tags: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }> = {},
+) {
   return {
     id: overrides.id ?? "card-1",
     priority: overrides.priority ?? "none",
@@ -29,7 +31,7 @@ describe("useFilteredCards", () => {
       ];
 
       const { result } = renderHook(() =>
-        useFilteredCards(cards, new Set(), new Set(), "manual", "desc")
+        useFilteredCards(cards, new Set(), new Set(), "manual", "desc"),
       );
 
       expect(result.current).toHaveLength(3);
@@ -43,7 +45,7 @@ describe("useFilteredCards", () => {
       ];
 
       const { result } = renderHook(() =>
-        useFilteredCards(cards, new Set(["high"]), new Set(), "manual", "desc")
+        useFilteredCards(cards, new Set(["high"]), new Set(), "manual", "desc"),
       );
 
       expect(result.current).toHaveLength(1);
@@ -58,7 +60,7 @@ describe("useFilteredCards", () => {
       ];
 
       const { result } = renderHook(() =>
-        useFilteredCards(cards, new Set(["high", "low"]), new Set(), "manual", "desc")
+        useFilteredCards(cards, new Set(["high", "low"]), new Set(), "manual", "desc"),
       );
 
       expect(result.current).toHaveLength(2);
@@ -75,7 +77,7 @@ describe("useFilteredCards", () => {
       ];
 
       const { result } = renderHook(() =>
-        useFilteredCards(cards, new Set(), new Set(["bug"]), "manual", "desc")
+        useFilteredCards(cards, new Set(), new Set(["bug"]), "manual", "desc"),
       );
 
       expect(result.current).toHaveLength(1);
@@ -90,7 +92,7 @@ describe("useFilteredCards", () => {
       ];
 
       const { result } = renderHook(() =>
-        useFilteredCards(cards, new Set(), new Set(["bug", "feature"]), "manual", "desc")
+        useFilteredCards(cards, new Set(), new Set(["bug", "feature"]), "manual", "desc"),
       );
 
       expect(result.current).toHaveLength(2);
@@ -104,7 +106,7 @@ describe("useFilteredCards", () => {
       ];
 
       const { result } = renderHook(() =>
-        useFilteredCards(cards, new Set(), new Set(["bug"]), "manual", "desc")
+        useFilteredCards(cards, new Set(), new Set(["bug"]), "manual", "desc"),
       );
 
       expect(result.current).toHaveLength(1);
@@ -121,7 +123,7 @@ describe("useFilteredCards", () => {
       ];
 
       const { result } = renderHook(() =>
-        useFilteredCards(cards, new Set(["high"]), new Set(["bug"]), "manual", "desc")
+        useFilteredCards(cards, new Set(["high"]), new Set(["bug"]), "manual", "desc"),
       );
 
       expect(result.current).toHaveLength(1);
@@ -138,7 +140,7 @@ describe("useFilteredCards", () => {
       ];
 
       const { result } = renderHook(() =>
-        useFilteredCards(cards, new Set(), new Set(), "manual", "desc")
+        useFilteredCards(cards, new Set(), new Set(), "manual", "desc"),
       );
 
       expect(result.current.map((c) => c.id)).toEqual(["1", "2", "3"]);
@@ -152,7 +154,7 @@ describe("useFilteredCards", () => {
       ];
 
       const { result } = renderHook(() =>
-        useFilteredCards(cards, new Set(), new Set(), "created", "asc")
+        useFilteredCards(cards, new Set(), new Set(), "created", "asc"),
       );
 
       expect(result.current.map((c) => c.id)).toEqual(["2", "3", "1"]);
@@ -166,7 +168,7 @@ describe("useFilteredCards", () => {
       ];
 
       const { result } = renderHook(() =>
-        useFilteredCards(cards, new Set(), new Set(), "created", "desc")
+        useFilteredCards(cards, new Set(), new Set(), "created", "desc"),
       );
 
       expect(result.current.map((c) => c.id)).toEqual(["1", "3", "2"]);
@@ -180,7 +182,7 @@ describe("useFilteredCards", () => {
       ];
 
       const { result } = renderHook(() =>
-        useFilteredCards(cards, new Set(), new Set(), "updated", "asc")
+        useFilteredCards(cards, new Set(), new Set(), "updated", "asc"),
       );
 
       expect(result.current.map((c) => c.id)).toEqual(["2", "3", "1"]);
@@ -194,7 +196,7 @@ describe("useFilteredCards", () => {
       ];
 
       const { result } = renderHook(() =>
-        useFilteredCards(cards, new Set(), new Set(), "updated", "desc")
+        useFilteredCards(cards, new Set(), new Set(), "updated", "desc"),
       );
 
       expect(result.current.map((c) => c.id)).toEqual(["1", "3", "2"]);
@@ -212,7 +214,14 @@ describe("useFilteredCardIds", () => {
     };
 
     const { result } = renderHook(() =>
-      useFilteredCardIds(cardIds, cardsById, new Set(["high"]), new Set(), "created", "asc")
+      useFilteredCardIds(
+        cardIds,
+        cardsById,
+        new Set(["high"]),
+        new Set(),
+        "created",
+        "asc",
+      ),
     );
 
     expect(result.current).toEqual(["3", "1"]);
@@ -226,7 +235,14 @@ describe("useFilteredCardIds", () => {
     };
 
     const { result } = renderHook(() =>
-      useFilteredCardIds(cardIds, cardsById, new Set(["high"]), new Set(), "manual", "desc")
+      useFilteredCardIds(
+        cardIds,
+        cardsById,
+        new Set(["high"]),
+        new Set(),
+        "manual",
+        "desc",
+      ),
     );
 
     // "missing" should be filtered out since it doesn't exist

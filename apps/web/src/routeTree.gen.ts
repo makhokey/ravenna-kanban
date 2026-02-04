@@ -9,14 +9,15 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as BoardRouteRouteImport } from './routes/board/route'
+import { Route as BRouteRouteImport } from './routes/b/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as BoardIndexRouteImport } from './routes/board/index'
-import { Route as BoardSetupRouteImport } from './routes/board/setup'
+import { Route as BIndexRouteImport } from './routes/b/index'
+import { Route as BSetupRouteImport } from './routes/b/setup'
+import { Route as BBoardSlugRouteImport } from './routes/b/$boardSlug'
 
-const BoardRouteRoute = BoardRouteRouteImport.update({
-  id: '/board',
-  path: '/board',
+const BRouteRoute = BRouteRouteImport.update({
+  id: '/b',
+  path: '/b',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -24,55 +25,63 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BoardIndexRoute = BoardIndexRouteImport.update({
+const BIndexRoute = BIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => BoardRouteRoute,
+  getParentRoute: () => BRouteRoute,
 } as any)
-const BoardSetupRoute = BoardSetupRouteImport.update({
+const BSetupRoute = BSetupRouteImport.update({
   id: '/setup',
   path: '/setup',
-  getParentRoute: () => BoardRouteRoute,
+  getParentRoute: () => BRouteRoute,
+} as any)
+const BBoardSlugRoute = BBoardSlugRouteImport.update({
+  id: '/$boardSlug',
+  path: '/$boardSlug',
+  getParentRoute: () => BRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/board': typeof BoardRouteRouteWithChildren
-  '/board/setup': typeof BoardSetupRoute
-  '/board/': typeof BoardIndexRoute
+  '/b': typeof BRouteRouteWithChildren
+  '/b/$boardSlug': typeof BBoardSlugRoute
+  '/b/setup': typeof BSetupRoute
+  '/b/': typeof BIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/board/setup': typeof BoardSetupRoute
-  '/board': typeof BoardIndexRoute
+  '/b/$boardSlug': typeof BBoardSlugRoute
+  '/b/setup': typeof BSetupRoute
+  '/b': typeof BIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/board': typeof BoardRouteRouteWithChildren
-  '/board/setup': typeof BoardSetupRoute
-  '/board/': typeof BoardIndexRoute
+  '/b': typeof BRouteRouteWithChildren
+  '/b/$boardSlug': typeof BBoardSlugRoute
+  '/b/setup': typeof BSetupRoute
+  '/b/': typeof BIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/board' | '/board/setup' | '/board/'
+  fullPaths: '/' | '/b' | '/b/$boardSlug' | '/b/setup' | '/b/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/board/setup' | '/board'
-  id: '__root__' | '/' | '/board' | '/board/setup' | '/board/'
+  to: '/' | '/b/$boardSlug' | '/b/setup' | '/b'
+  id: '__root__' | '/' | '/b' | '/b/$boardSlug' | '/b/setup' | '/b/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  BoardRouteRoute: typeof BoardRouteRouteWithChildren
+  BRouteRoute: typeof BRouteRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/board': {
-      id: '/board'
-      path: '/board'
-      fullPath: '/board'
-      preLoaderRoute: typeof BoardRouteRouteImport
+    '/b': {
+      id: '/b'
+      path: '/b'
+      fullPath: '/b'
+      preLoaderRoute: typeof BRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -82,40 +91,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/board/': {
-      id: '/board/'
+    '/b/': {
+      id: '/b/'
       path: '/'
-      fullPath: '/board/'
-      preLoaderRoute: typeof BoardIndexRouteImport
-      parentRoute: typeof BoardRouteRoute
+      fullPath: '/b/'
+      preLoaderRoute: typeof BIndexRouteImport
+      parentRoute: typeof BRouteRoute
     }
-    '/board/setup': {
-      id: '/board/setup'
+    '/b/setup': {
+      id: '/b/setup'
       path: '/setup'
-      fullPath: '/board/setup'
-      preLoaderRoute: typeof BoardSetupRouteImport
-      parentRoute: typeof BoardRouteRoute
+      fullPath: '/b/setup'
+      preLoaderRoute: typeof BSetupRouteImport
+      parentRoute: typeof BRouteRoute
+    }
+    '/b/$boardSlug': {
+      id: '/b/$boardSlug'
+      path: '/$boardSlug'
+      fullPath: '/b/$boardSlug'
+      preLoaderRoute: typeof BBoardSlugRouteImport
+      parentRoute: typeof BRouteRoute
     }
   }
 }
 
-interface BoardRouteRouteChildren {
-  BoardSetupRoute: typeof BoardSetupRoute
-  BoardIndexRoute: typeof BoardIndexRoute
+interface BRouteRouteChildren {
+  BBoardSlugRoute: typeof BBoardSlugRoute
+  BSetupRoute: typeof BSetupRoute
+  BIndexRoute: typeof BIndexRoute
 }
 
-const BoardRouteRouteChildren: BoardRouteRouteChildren = {
-  BoardSetupRoute: BoardSetupRoute,
-  BoardIndexRoute: BoardIndexRoute,
+const BRouteRouteChildren: BRouteRouteChildren = {
+  BBoardSlugRoute: BBoardSlugRoute,
+  BSetupRoute: BSetupRoute,
+  BIndexRoute: BIndexRoute,
 }
 
-const BoardRouteRouteWithChildren = BoardRouteRoute._addFileChildren(
-  BoardRouteRouteChildren,
-)
+const BRouteRouteWithChildren =
+  BRouteRoute._addFileChildren(BRouteRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  BoardRouteRoute: BoardRouteRouteWithChildren,
+  BRouteRoute: BRouteRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

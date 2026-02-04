@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  createCardServerSchema,
-  updateCardServerSchema,
-} from "~/lib/card-config";
+import { createCardServerSchema, updateCardServerSchema } from "~/lib/card-config";
 
 describe("Card API Validation", () => {
   describe("createCardServerSchema", () => {

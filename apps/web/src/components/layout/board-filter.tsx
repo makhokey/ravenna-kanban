@@ -1,8 +1,18 @@
 import { Button } from "@repo/ui/components/button";
 import { Popover, PopoverPopup, PopoverTrigger } from "@repo/ui/components/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/components/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/ui/components/select";
 import { Toggle, ToggleGroup } from "@repo/ui/components/toggle-group";
+import { useTheme } from "@repo/ui/lib/theme-provider";
 import { cn } from "@repo/ui/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { useAtom } from "jotai";
 import {
   ArrowDownWideNarrow,
@@ -19,6 +29,8 @@ import {
   Sun,
   X,
 } from "lucide-react";
+import { useState } from "react";
+import { listBoards } from "~/api/admin-api";
 import {
   groupByAtom,
   hiddenPriorityColumnsAtom,
@@ -32,7 +44,8 @@ import {
   type SortField,
   type ViewMode,
 } from "~/atoms/board-atoms";
-import { useTheme } from "@repo/ui/lib/theme-provider";
+import { CreateBoardDialog } from "~/components/board";
+import { useBoardSlug } from "~/contexts/board-context";
 import { PRIORITY_OPTIONS, STATUS_OPTIONS, TAG_OPTIONS } from "~/lib/card-config";
 import { clearBoardSettingsCookie, setBoardSettingsCookie } from "~/lib/cookies.client";
 import type { GroupBy } from "~/types/board-types";
@@ -52,7 +65,26 @@ export function BoardFilter() {
   const [sortField, setSortField] = useAtom(sortFieldAtom);
   const [sortDirection, setSortDirection] = useAtom(sortDirectionAtom);
   const [hiddenStatusColumns, setHiddenStatusColumns] = useAtom(hiddenStatusColumnsAtom);
-  const [hiddenPriorityColumns, setHiddenPriorityColumns] = useAtom(hiddenPriorityColumnsAtom);
+  const [hiddenPriorityColumns, setHiddenPriorityColumns] = useAtom(
+    hiddenPriorityColumnsAtom,
+  );
+
+  const currentBoardSlug = useBoardSlug();
+  const navigate = useNavigate();
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+
+  const { data: boardsList = [] } = useQuery({
+    queryKey: ["boards", "list"],
+    queryFn: () => listBoards(),
+  });
+
+  const handleBoardChange = (value: string | null) => {
+    if (value === "__new__") {
+      setIsCreateDialogOpen(true);
+    } else if (value) {
+      navigate({ to: "/b/$boardSlug", params: { boardSlug: value } });
+    }
+  };
 
   const handleViewModeChange = (mode: ViewMode) => {
     setViewMode(mode);
@@ -158,62 +190,91 @@ export function BoardFilter() {
 
   return (
     <div className="flex items-center justify-between gap-4 border-b px-4 py-1.5">
-      <Popover>
-        <PopoverTrigger
-          render={
-            <Button variant="outline" size="sm">
-              <FilterIcon className="size-3" />
-              Filters
-            </Button>
-          }
-        />
-        <PopoverPopup align="start" className="w-72">
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <span className="text-muted-foreground text-xs font-medium">Priority</span>
-              <div className="flex flex-wrap gap-1">
-                {PRIORITY_OPTIONS.map((opt) => (
-                  <Button
-                    key={opt.value}
-                    variant={priorityFilters.has(opt.value) ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => togglePriority(opt.value)}
-                    className="h-7 px-2 text-xs"
-                  >
-                    <opt.icon className="mr-1 size-3" />
-                    {opt.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <span className="text-muted-foreground text-xs font-medium">Tags</span>
-              <div className="flex flex-wrap gap-1">
-                {TAG_OPTIONS.map((opt) => (
-                  <Button
-                    key={opt.value}
-                    variant={tagFilters.has(opt.value) ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => toggleTag(opt.value)}
-                    className="h-7 px-2 text-xs"
-                  >
-                    <span className={cn("size-2 rounded-full", opt.color)} />
-                    {opt.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {hasFilters && (
-              <Button variant="ghost" size="sm" onClick={clearFilters} className="w-full">
-                <X className="size-3" />
-                Clear Filters
+      <div className="flex items-center gap-2">
+        <Select
+          value={currentBoardSlug}
+          onValueChange={handleBoardChange}
+          items={boardsList.map((b) => ({ label: b.name, value: b.slug }))}
+        >
+          <SelectTrigger size="sm" className="w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem className="justify-start" value="__new__">
+              New board
+            </SelectItem>
+            {boardsList.length > 0 && <SelectSeparator />}
+            {boardsList.map((board) => (
+              <SelectItem key={board.slug} value={board.slug}>
+                {board.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Popover>
+          <PopoverTrigger
+            render={
+              <Button variant="outline" size="sm">
+                <FilterIcon className="size-3" />
+                Filters
               </Button>
-            )}
-          </div>
-        </PopoverPopup>
-      </Popover>
+            }
+          />
+          <PopoverPopup align="start" className="w-72">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <span className="text-muted-foreground text-xs font-medium">
+                  Priority
+                </span>
+                <div className="flex flex-wrap gap-1">
+                  {PRIORITY_OPTIONS.map((opt) => (
+                    <Button
+                      key={opt.value}
+                      variant={priorityFilters.has(opt.value) ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => togglePriority(opt.value)}
+                      className="h-7 px-2 text-xs"
+                    >
+                      <opt.icon className="mr-1 size-3" />
+                      {opt.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <span className="text-muted-foreground text-xs font-medium">Tags</span>
+                <div className="flex flex-wrap gap-1">
+                  {TAG_OPTIONS.map((opt) => (
+                    <Button
+                      key={opt.value}
+                      variant={tagFilters.has(opt.value) ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => toggleTag(opt.value)}
+                      className="h-7 px-2 text-xs"
+                    >
+                      <span className={cn("size-2 rounded-full", opt.color)} />
+                      {opt.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {hasFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="w-full"
+                >
+                  <X className="size-3" />
+                  Clear Filters
+                </Button>
+              )}
+            </div>
+          </PopoverPopup>
+        </Popover>
+      </div>
 
       <Popover>
         <PopoverTrigger
@@ -296,12 +357,14 @@ export function BoardFilter() {
                     variant="outline"
                     size="icon-sm"
                     onClick={toggleSortDirection}
-                    aria-label={sortDirection === "asc" ? "Sort ascending" : "Sort descending"}
+                    aria-label={
+                      sortDirection === "asc" ? "Sort ascending" : "Sort descending"
+                    }
                   >
                     {sortDirection === "asc" ? (
-                      <ArrowUpNarrowWide className="size-4" />
+                      <ArrowUpNarrowWide className="size-3" />
                     ) : (
-                      <ArrowDownWideNarrow className="size-4" />
+                      <ArrowDownWideNarrow className="size-3" />
                     )}
                   </Button>
                 )}
@@ -315,7 +378,9 @@ export function BoardFilter() {
                   ? STATUS_OPTIONS.map((opt) => (
                       <Button
                         key={opt.value}
-                        variant={hiddenStatusColumns.has(opt.value) ? "default" : "outline"}
+                        variant={
+                          hiddenStatusColumns.has(opt.value) ? "default" : "outline"
+                        }
                         size="sm"
                         onClick={() => toggleHiddenStatusColumn(opt.value)}
                         className="h-7 px-2 text-xs"
@@ -327,7 +392,9 @@ export function BoardFilter() {
                   : PRIORITY_OPTIONS.map((opt) => (
                       <Button
                         key={opt.value}
-                        variant={hiddenPriorityColumns.has(opt.value) ? "default" : "outline"}
+                        variant={
+                          hiddenPriorityColumns.has(opt.value) ? "default" : "outline"
+                        }
                         size="sm"
                         onClick={() => toggleHiddenPriorityColumn(opt.value)}
                         className="h-7 px-2 text-xs"
@@ -367,7 +434,12 @@ export function BoardFilter() {
             </div>
 
             {hasNonDefaultSettings && (
-              <Button variant="ghost" size="sm" onClick={resetToDefaults} className="w-full">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={resetToDefaults}
+                className="w-full"
+              >
                 <RotateCcw className="size-3" />
                 Reset
               </Button>
@@ -375,6 +447,14 @@ export function BoardFilter() {
           </div>
         </PopoverPopup>
       </Popover>
+
+      <CreateBoardDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+        onSuccess={(slug) =>
+          navigate({ to: "/b/$boardSlug", params: { boardSlug: slug } })
+        }
+      />
     </div>
   );
 }

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  COOKIE_NAME,
+  DEFAULT_SETTINGS,
   parseCookies,
   parseCookieSettings,
-  DEFAULT_SETTINGS,
-  COOKIE_NAME,
 } from "../cookies.shared";
 
 describe("parseCookies", () => {
@@ -45,7 +45,8 @@ describe("parseCookieSettings", () => {
   });
 
   it("returns default settings when cookie has wrong name", () => {
-    const cookieHeader = "other-cookie=" + encodeURIComponent(JSON.stringify({ viewMode: "table" }));
+    const cookieHeader =
+      "other-cookie=" + encodeURIComponent(JSON.stringify({ viewMode: "table" }));
     expect(parseCookieSettings(cookieHeader)).toEqual(DEFAULT_SETTINGS);
   });
 

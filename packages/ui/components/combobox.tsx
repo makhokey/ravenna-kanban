@@ -105,7 +105,11 @@ function ComboboxInput({
         )}
         data-slot="combobox-input"
         render={
-          <Input className="has-disabled:opacity-100" nativeInput size={sizeValue} />
+          <Input
+            className="has-disabled:opacity-100"
+            nativeInput
+            size={typeof sizeValue === "number" ? sizeValue : undefined}
+          />
         }
         {...props}
       />

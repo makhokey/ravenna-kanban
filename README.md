@@ -2,6 +2,57 @@
 
 A modern Kanban board application built with TanStack Start and deployed on Cloudflare Workers.
 
+**Live Demo:** https://ravenna-kanban.paperslab.workers.dev/
+
+## Requirements Checklist
+
+### Frontend Requirements
+
+- [x] Create, edit, delete cards
+- [x] Move cards between columns (drag-and-drop)
+- [x] Reorder cards within column
+- [x] Filter by attribute (priority, tags)
+- [x] Group by attribute (status, priority)
+- [x] TypeScript with strict mode
+- [x] Tests for core logic
+
+### Backend Requirements
+
+- [x] Type-safe with TypeScript
+- [x] Input validation (Zod schemas)
+- [x] Basic logging (Pino)
+- [x] Basic tests (API validation)
+- [x] CRUD operations for cards
+- [x] Move cards between columns
+- [x] Reorder cards with position updates
+- [x] List cards with filters
+- [x] Persistent storage (D1 SQLite)
+
+### Extended Features
+
+- [x] Card details side panel
+- [x] Dark mode support
+- [x] Mobile responsive (touch DnD)
+- [x] Soft delete (deletedAt timestamp)
+- [x] Database migrations (Drizzle)
+- [x] Multi-board support with URL slugs
+- [x] Per-board card ID prefixes (MYP-1, BUG-2)
+- [x] Virtual scrolling for large boards
+
+## Design Notes
+
+- Uses **TanStack Start** with TanStack Router and TanStack Query
+- All mutations managed via **TanStack Query with optimistic updates**
+- Server-side rendering with TanStack Start for optimal performance
+- **TanStack Router preloading** prefetches data and components
+- When deployed, pages are served from **Cloudflare's edge network**
+- Uses **Drizzle ORM** on top of Cloudflare D1
+- **Jotai atoms** for UI state (filters, dialogs, drag state)
+- **dnd-kit** for accessible drag-and-drop with touch support
+- **Fractional indexing** for O(1) position updates
+- **Cookie-based settings** persistence (no auth required)
+- **Virtualized card lists** (virtua) for performance
+
 ## Tech Stack
 
 - **Framework:** [TanStack Start](https://tanstack.com/start/latest) + [Router](https://tanstack.com/router/latest) + [Query](https://tanstack.com/query/latest)
@@ -33,23 +84,69 @@ A modern Kanban board application built with TanStack Start and deployed on Clou
 - [Bun](https://bun.sh/) >= 1.0
 - [Cloudflare account](https://dash.cloudflare.com/) (for D1 and deployment)
 
-### Installation
+### Fork Setup
 
-```bash
-# Install dependencies
-bun install
+1. **Fork and clone the repository**
+   ```bash
+   git clone https://github.com/YOUR_USERNAME/ravenna-kanban.git
+   cd ravenna-kanban
+   bun install
+   ```
 
-# Create D1 database
-bun d1:create
+2. **Login to Cloudflare**
+   ```bash
+   bunx wrangler login
+   ```
 
-# Update wrangler.jsonc with your database_id
+3. **Create a D1 database**
+   ```bash
+   bunx wrangler d1 create ravenna-kanban-db
+   ```
+   This outputs a `database_id` - copy it for the next step.
 
-# Run migrations
-bun d1:migrate
+4. **Update `apps/web/wrangler.jsonc`**
+   Replace the `database_id` with your own:
+   ```jsonc
+   "d1_databases": [
+     {
+       "binding": "DB",
+       "database_name": "ravenna-kanban-db",
+       "database_id": "YOUR_DATABASE_ID_HERE",
+       "migrations_dir": "../../packages/db/drizzle"
+     }
+   ]
+   ```
 
-# Start development server
-bun dev
+   Optionally remove the `kv_namespaces` section if you don't need caching:
+   ```jsonc
+   // Remove or comment out if not using KV
+   "kv_namespaces": [...]
+   ```
+
+5. **Run database migrations (local)**
+   ```bash
+   bun d1:migrate
+   ```
+
+6. **Start development server**
+   ```bash
+   bun dev
+   ```
+   Open http://localhost:3000
+
+### Environment Variables (for production migrations)
+
+Create `packages/db/.env` for Drizzle migrations to production:
+```env
+CLOUDFLARE_ACCOUNT_ID=your_account_id
+CLOUDFLARE_D1_ID=your_database_id
+CLOUDFLARE_API_TOKEN=your_api_token
 ```
+
+You can find these values:
+- **Account ID**: Cloudflare dashboard URL `dash.cloudflare.com/{ACCOUNT_ID}/...`
+- **D1 ID**: Same as `database_id` from step 3
+- **API Token**: Create at https://dash.cloudflare.com/profile/api-tokens with D1 edit permissions
 
 ### Development
 
@@ -62,11 +159,17 @@ bunx wrangler dev
 
 # Run tests
 bun --filter @repo/web test
+
+# Run code quality checks
+bun run check
 ```
 
 ### Deployment
 
 ```bash
+# Run production migrations
+bun d1:migrate:prod
+
 # Deploy to Cloudflare Workers
 bun run deploy
 ```
@@ -120,24 +223,25 @@ bun run deploy
 
 Located in `apps/web/src/atoms/board-atoms.ts`:
 
-| Atom | Purpose |
-|------|---------|
-| `viewModeAtom` | Toggle between kanban and table views |
-| `groupByAtom` | Group cards by status or priority |
-| `priorityFiltersAtom` | Filter cards by priority |
-| `tagFiltersAtom` | Filter cards by tags |
-| `sortFieldAtom` | Sort by manual, created, or updated |
-| `sortDirectionAtom` | Ascending or descending sort |
-| `hiddenStatusColumnsAtom` | Hide specific status columns |
-| `hiddenPriorityColumnsAtom` | Hide specific priority columns |
-| `dialogAtom` | Card create/edit modal state |
-| `panelAtom` | Side panel card editor state |
-| `activeCardAtom` | Currently dragged card |
-| `tempCardOrderAtom` | Optimistic card ordering during drag |
+| Atom                        | Purpose                               |
+| --------------------------- | ------------------------------------- |
+| `viewModeAtom`              | Toggle between kanban and table views |
+| `groupByAtom`               | Group cards by status or priority     |
+| `priorityFiltersAtom`       | Filter cards by priority              |
+| `tagFiltersAtom`            | Filter cards by tags                  |
+| `sortFieldAtom`             | Sort by manual, created, or updated   |
+| `sortDirectionAtom`         | Ascending or descending sort          |
+| `hiddenStatusColumnsAtom`   | Hide specific status columns          |
+| `hiddenPriorityColumnsAtom` | Hide specific priority columns        |
+| `dialogAtom`                | Card create/edit modal state          |
+| `panelAtom`                 | Side panel card editor state          |
+| `activeCardAtom`            | Currently dragged card                |
+| `tempCardOrderAtom`         | Optimistic card ordering during drag  |
 
 ### Settings Persistence
 
 User preferences are persisted in a `board-settings` cookie:
+
 - Settings synced to cookies on change via `SettingsSyncer` component
 - Settings hydrated from cookies on page load via `SettingsHydrator` component
 - Cookie parsing with validation and fallback to defaults
@@ -151,6 +255,9 @@ User preferences are persisted in a `board-settings` cookie:
 |--------|------|-------------|
 | id | TEXT | Primary key (UUID) |
 | name | TEXT | Board name |
+| slug | TEXT | URL-friendly identifier |
+| display_id_prefix | TEXT | Card ID prefix (e.g., "MYP") |
+| next_card_number | INTEGER | Auto-increment for card IDs |
 | created_at | INTEGER | Creation timestamp |
 | updated_at | INTEGER | Last update timestamp |
 
@@ -158,7 +265,7 @@ User preferences are persisted in a `board-settings` cookie:
 | Column | Type | Description |
 |--------|------|-------------|
 | id | TEXT | Primary key (UUID) |
-| display_id | TEXT | Human-readable ID (RAV-1, RAV-2) |
+| display_id | TEXT | Human-readable ID (MYP-1, BUG-2) |
 | title | TEXT | Card title |
 | description | TEXT | Card description (optional) |
 | position | TEXT | Fractional index for ordering |
@@ -184,45 +291,75 @@ Cards use [fractional indexing](https://www.figma.com/blog/realtime-editing-of-o
 
 ### Board API (`apps/web/src/api/board-api.ts`)
 
-| Function | Method | Description |
-|----------|--------|-------------|
-| `getBoard` | GET | Fetch board with all cards, normalized for O(1) lookups |
-| `getFirstBoard` | GET | Fetch first board (cached) |
-| `createDefaultBoard` | POST | Create initial board on first visit |
-| `getBoardSettings` | GET | Read settings from request cookies |
+| Function             | Method | Description                                             |
+| -------------------- | ------ | ------------------------------------------------------- |
+| `getBoard`           | GET    | Fetch board with all cards, normalized for O(1) lookups |
+| `getFirstBoard`      | GET    | Fetch first board (cached)                              |
+| `createDefaultBoard` | POST   | Create initial board on first visit                     |
+| `getBoardSettings`   | GET    | Read settings from request cookies                      |
 
 ### Card API (`apps/web/src/api/card-api.ts`)
 
-| Function | Method | Description |
-|----------|--------|-------------|
-| `getCards` | GET | List cards with optional filters |
-| `createCard` | POST | Create new card with auto-generated display ID |
-| `updateCard` | POST | Update card fields (title, description, priority, status, tags) |
-| `moveCard` | POST | Update card position and/or status (drag-and-drop) |
-| `deleteCard` | POST | Soft delete card (sets deletedAt) |
+| Function     | Method | Description                                                     |
+| ------------ | ------ | --------------------------------------------------------------- |
+| `getCards`   | GET    | List cards with optional filters                                |
+| `createCard` | POST   | Create new card with auto-generated display ID                  |
+| `updateCard` | POST   | Update card fields (title, description, priority, status, tags) |
+| `moveCard`   | POST   | Update card position and/or status (drag-and-drop)              |
+| `deleteCard` | POST   | Soft delete card (sets deletedAt)                               |
 
 ## Project Structure
 
 ```
 ravenna-kanban/
 ├── apps/
-│   └── web/                 # TanStack Start application
+│   └── web/                      # TanStack Start application (React 19 + Cloudflare Workers)
 │       ├── src/
-│       │   ├── api/         # Server functions
-│       │   ├── atoms/       # Jotai atoms
-│       │   ├── components/  # React components
-│       │   │   ├── kanban/  # Board, Column, Card components
-│       │   │   ├── card-editor/  # Card dialog and panel
-│       │   │   └── layout/  # Filter bar, board view
-│       │   ├── hooks/       # Custom React hooks
-│       │   ├── lib/         # Utilities (cookies, dnd, db)
-│       │   ├── routes/      # File-based routes
-│       │   └── types/       # TypeScript types
-│       └── wrangler.jsonc   # Cloudflare config
+│       │   ├── api/              # Server functions (board-api, card-api, admin-api)
+│       │   ├── atoms/            # Jotai atoms for UI state
+│       │   ├── components/
+│       │   │   ├── board/        # Board management (create, settings)
+│       │   │   ├── card-editor/  # Card dialog and side panel
+│       │   │   ├── kanban/       # Kanban view components
+│       │   │   ├── layout/       # App layout, filters, navigation
+│       │   │   └── table/        # Table view components
+│       │   ├── contexts/         # React contexts (board, theme)
+│       │   ├── hooks/            # Custom hooks + tests
+│       │   ├── lib/              # Utilities (cookies, dnd, logger, prefix, slugify)
+│       │   ├── routes/           # File-based routes (/b/:slug)
+│       │   └── types/            # TypeScript type definitions
+│       └── wrangler.jsonc        # Cloudflare Workers config
 ├── packages/
-│   ├── db/                  # Drizzle ORM + D1 schema
-│   └── ui/                  # Shared UI components (shadcn)
-└── tooling/                 # Shared ESLint/TypeScript configs
+│   ├── db/                       # Drizzle ORM schema + D1 migrations
+│   │   ├── src/schema/           # Table definitions
+│   │   └── drizzle/              # SQL migration files
+│   └── ui/                       # Shared UI components (shadcn/ui + Base UI)
+└── tooling/                      # Shared ESLint + TypeScript configs
+```
+
+## Performance
+
+- **Virtual scrolling** (virtua) for rendering large boards efficiently
+- **Optimistic updates** for instant UI feedback on mutations
+- **Normalized data structures** for O(1) card lookups
+- **Edge deployment** on Cloudflare Workers for global low-latency
+- **Router preloading** for instant navigation between boards
+- **Query caching** with intelligent background refetching
+
+## Test Coverage
+
+| Test File                    | Coverage                             |
+| ---------------------------- | ------------------------------------ |
+| `card-api.test.ts`           | API validation, card CRUD operations |
+| `dnd-utils.test.ts`          | Drag-and-drop position calculations  |
+| `cookies.test.ts`            | Settings parsing and persistence     |
+| `card-config.test.ts`        | Config helpers and form validation   |
+| `use-filtered-cards.test.ts` | Filter and sort logic                |
+
+Run tests with:
+
+```bash
+bun --filter @repo/web test
 ```
 
 ## Key UX Decisions
@@ -255,13 +392,11 @@ ravenna-kanban/
 
 ### Current Limitations
 
-- **Single board**: Currently supports one board per deployment
-- **No authentication**: All users share the same board
+- **No authentication**: All users share the same boards
 - **Local persistence only**: Each Cloudflare edge location has its own D1 replica
 
 ### Potential Improvements
 
-- **Multi-board support**: Add board CRUD and board selector
 - **User authentication**: Add Cloudflare Access or custom auth
 - **Real-time sync**: Add WebSocket support for multi-user collaboration
 - **Card comments**: Add comment thread on cards

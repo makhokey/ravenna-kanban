@@ -5,10 +5,11 @@ import { cn } from "@repo/ui/lib/utils";
 
 type InputProps = React.ComponentProps<"input"> & {
   nativeInput?: boolean;
+  unstyled?: boolean;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- extracted to prevent DOM spread
-function Input({ className, type, nativeInput, ...props }: InputProps) {
+function Input({ className, type, nativeInput, unstyled, ...props }: InputProps) {
   return (
     <InputPrimitive
       type={type}

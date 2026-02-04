@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
-  getStatusOption,
+  cardFormSchema,
   getPriorityOption,
   getSelectedTags,
+  getStatusOption,
+  PRIORITY_OPTIONS,
   safeParseJsonTags,
   STATUS_OPTIONS,
-  PRIORITY_OPTIONS,
   TAG_OPTIONS,
-  cardFormSchema,
 } from "../card-config";
 
 describe("Card Config Helpers", () => {

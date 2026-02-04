@@ -1,3 +1,4 @@
+export { AdminPopover } from "./admin-popover";
 export { BoardFilter } from "./board-filter";
 export { BoardView } from "./board-view";
 export { DefaultCatchBoundary } from "./default-catch-boundary";

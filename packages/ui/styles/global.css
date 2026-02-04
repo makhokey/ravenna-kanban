@@ -49,13 +49,13 @@
 .dark {
   --background: oklch(0.1579 0 0);
   --foreground: oklch(0.9848 0 0);
-  --card: oklch(0.2700 0.006 248);
+  --card: oklch(0.27 0.006 248);
   --card-foreground: oklch(0.9848 0 0);
-  --popover: oklch(0.2700 0.006 248);
+  --popover: oklch(0.27 0.006 248);
   --popover-foreground: oklch(0.9848 0 0);
   --primary: oklch(0.9848 0 0);
   --primary-foreground: oklch(0.2103 0.0059 285.88);
-  --secondary: oklch(0.2700 0.006 248);
+  --secondary: oklch(0.27 0.006 248);
   --secondary-foreground: oklch(0.9848 0 0);
   --muted: oklch(0.2267 0 0);
   --muted-foreground: oklch(0.76 0 0);

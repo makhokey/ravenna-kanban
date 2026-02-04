@@ -89,10 +89,10 @@ export function CardPanel() {
     <div ref={containerRef} className="bg-card flex w-82 shrink-0 flex-col border-l">
       <Form className="flex h-full flex-col">
         {/* Header with card ID, navigation, and close button */}
-        <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
+        <div className="flex h-10 items-center justify-between gap-2 border-b px-3">
           {existingCard && (
             <span className="text-card-foreground text-sm font-medium">
-              {existingCard.displayId ?? existingCard.id.slice(0, 8).toUpperCase()}
+              {existingCard.displayId}
             </span>
           )}
           <div className="flex items-center gap-0.5">

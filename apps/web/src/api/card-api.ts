@@ -1,7 +1,7 @@
 import type { Db } from "@repo/db";
-import { cards, sequences } from "@repo/db/schema";
+import { boards, cards } from "@repo/db/schema";
 import { createServerFn } from "@tanstack/react-start";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { generateKeyBetween } from "fractional-indexing";
 import { v4 as uuidv4 } from "uuid";
 import { createCardServerSchema, updateCardServerSchema } from "~/lib/card-config";
@@ -17,32 +17,6 @@ async function invalidateCacheForCard(db: Db, cardId: string): Promise<void> {
   }
 }
 
-// List cards with optional filters
-export const getCards = createServerFn({ method: "GET" })
-  .inputValidator(
-    (data: { boardId?: string; priority?: "low" | "medium" | "high" } | undefined) =>
-      data,
-  )
-  .handler(async ({ data }) => {
-    const log = cardLogger.child({ fn: "getCards", boardId: data?.boardId, priority: data?.priority });
-    log.info("fetching cards");
-    const db = getDb();
-    // Always filter out soft-deleted cards
-    const conditions = [isNull(cards.deletedAt)];
-
-    if (data?.boardId) conditions.push(eq(cards.boardId, data.boardId));
-    if (data?.priority) conditions.push(eq(cards.priority, data.priority));
-
-    const result = await db
-      .select()
-      .from(cards)
-      .where(and(...conditions))
-      .orderBy(cards.position);
-
-    log.info({ count: result.length }, "cards fetched");
-    return result;
-  });
-
 // Create card
 export const createCard = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => {
@@ -53,24 +27,29 @@ export const createCard = createServerFn({ method: "POST" })
     return result.data;
   })
   .handler(async ({ data }) => {
-    const log = cardLogger.child({ fn: "createCard", boardId: data.boardId, status: data.status });
+    const log = cardLogger.child({
+      fn: "createCard",
+      boardId: data.boardId,
+      status: data.status,
+    });
     log.info({ title: data.title }, "creating card");
     const db = getDb();
     const id = uuidv4();
     const now = new Date();
 
-    // Get and increment sequence for displayId
-    const [sequence] = await db
-      .select()
-      .from(sequences)
-      .where(eq(sequences.name, "card"));
-    const nextNumber = sequence?.nextId ?? 1;
-    const displayId = `RAV-${nextNumber}`;
+    // Get board's prefix and next card number
+    const [board] = await db.select().from(boards).where(eq(boards.id, data.boardId));
+    if (!board) {
+      throw new Error("Board not found");
+    }
+    const nextNumber = board.nextCardNumber;
+    const displayId = `${board.displayIdPrefix}-${nextNumber}`;
 
+    // Increment board's nextCardNumber
     await db
-      .update(sequences)
-      .set({ nextId: nextNumber + 1 })
-      .where(eq(sequences.name, "card"));
+      .update(boards)
+      .set({ nextCardNumber: nextNumber + 1 })
+      .where(eq(boards.id, data.boardId));
 
     // Get the last card's position in the status group to append after it
     const existingCards = await db
@@ -117,7 +96,12 @@ export const moveCard = createServerFn({ method: "POST" })
     }) => data,
   )
   .handler(async ({ data }) => {
-    const log = cardLogger.child({ fn: "moveCard", cardId: data.cardId, status: data.status, priority: data.priority });
+    const log = cardLogger.child({
+      fn: "moveCard",
+      cardId: data.cardId,
+      status: data.status,
+      priority: data.priority,
+    });
     log.info("moving card");
     const db = getDb();
     const { cardId, status, position, boardId, priority } = data;
@@ -155,7 +139,10 @@ export const updateCard = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }) => {
     const log = cardLogger.child({ fn: "updateCard", cardId: data.id });
-    log.info({ title: data.title, priority: data.priority, status: data.status }, "updating card");
+    log.info(
+      { title: data.title, priority: data.priority, status: data.status },
+      "updating card",
+    );
     const db = getDb();
     const { id, tags, priority, status, ...updates } = data;
 

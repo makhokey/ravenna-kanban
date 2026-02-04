@@ -1,13 +1,15 @@
-import pino from "pino";
+// @ts-expect-error - pino/browser has no type declarations
+import pino from "pino/browser";
 
 // Create base logger configured for Cloudflare Workers
 // Workers Logs automatically captures console output, but pino gives us
 // structured logging, log levels, and child loggers for context
+// Note: Using pino/browser for Cloudflare Workers compatibility (no WeakRef dependency)
 export const logger = pino({
   level: process.env.NODE_ENV === "production" ? "info" : "debug",
   // Cloudflare Workers Logs recommends JSON format for better indexing
   formatters: {
-    level: (label) => ({ level: label }),
+    level: (label: string) => ({ level: label }),
   },
   // Reduce payload size in production
   base: process.env.NODE_ENV === "production" ? {} : { pid: undefined },

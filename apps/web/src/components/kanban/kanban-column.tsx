@@ -42,7 +42,7 @@ function KanbanColumnInner({ groupKey, groupBy, cardIds, cardsById }: KanbanColu
     <>
       {/* Column Header */}
       <div className="flex items-center justify-between px-4">
-        <div className="flex items-center gap-2 py-2">
+        <div className="flex h-10 items-center gap-2">
           {groupBy === "status" ? (
             <StatusIcon status={groupKey as StatusValue} />
           ) : (
@@ -107,7 +107,7 @@ export function KanbanColumn({
     <div
       ref={setDroppableRef}
       className={cn(
-        "flex h-full w-92 shrink-0 flex-col border-x border-transparent pt-2",
+        "flex h-full w-92 shrink-0 flex-col border-x border-transparent",
         isOver && "border-primary border-dashed duration-300 ease-in-out",
       )}
     >

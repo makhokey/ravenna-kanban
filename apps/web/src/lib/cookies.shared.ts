@@ -69,7 +69,9 @@ export function parseCookieSettings(cookieHeader: string): BoardSettings {
   try {
     const parsed = JSON.parse(decodeURIComponent(settingsStr));
     return {
-      viewMode: isValidViewMode(parsed.viewMode) ? parsed.viewMode : DEFAULT_SETTINGS.viewMode,
+      viewMode: isValidViewMode(parsed.viewMode)
+        ? parsed.viewMode
+        : DEFAULT_SETTINGS.viewMode,
       groupBy: isValidGroupBy(parsed.groupBy) ? parsed.groupBy : DEFAULT_SETTINGS.groupBy,
       priorityFilters: Array.isArray(parsed.priorityFilters)
         ? parsed.priorityFilters

@@ -22,7 +22,7 @@ export function CardList({ cardIds, cardsById }: CardListProps) {
   }, [cardIds, activeId]);
 
   return (
-    <div style={{ height: "100%" }} className="py-2">
+    <div style={{ height: "100%" }}>
       <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
         <VList ref={listRef} style={{ height: "100%" }} keepMounted={keepMounted}>
           {cardIds.map((id) => {

@@ -22,12 +22,12 @@ import {
   hiddenPriorityColumnsAtom,
   hiddenStatusColumnsAtom,
   priorityFiltersAtom,
+  type SortDirection,
   sortDirectionAtom,
+  type SortField,
   sortFieldAtom,
   tagFiltersAtom,
   tempCardOrderAtom,
-  type SortDirection,
-  type SortField,
 } from "~/atoms/board-atoms";
 import { useBoard } from "~/hooks/use-board";
 import { useMoveCard } from "~/hooks/use-cards";
@@ -287,7 +287,8 @@ export function KanbanView() {
     groupBy === "status" ? board.cardIdsByStatus : board.cardIdsByPriority;
 
   // Filter out hidden columns
-  const hiddenColumns = groupBy === "status" ? hiddenStatusColumns : hiddenPriorityColumns;
+  const hiddenColumns =
+    groupBy === "status" ? hiddenStatusColumns : hiddenPriorityColumns;
   const visibleGroupOrder = groupOrder.filter((key) => !hiddenColumns.has(key as string));
 
   return (

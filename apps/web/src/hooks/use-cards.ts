@@ -3,10 +3,11 @@ import { toastManager } from "@repo/ui/components/toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { generateKeyBetween } from "fractional-indexing";
 import { createCard, deleteCard, moveCard, updateCard } from "~/api/card-api";
+import { useBoardSlug } from "~/contexts/board-context";
 import { comparePosition } from "~/lib/position-compare";
 import type { StatusValue } from "~/types/board-types";
 import { boardKeys } from "./query-keys";
-import { BoardData, DEFAULT_BOARD_ID } from "./use-board";
+import type { BoardData } from "./use-board";
 
 type CreateCardInput = {
   title: string;
@@ -124,7 +125,8 @@ function moveCardInBoard(
 
 export function useCreateCard() {
   const queryClient = useQueryClient();
-  const queryKey = boardKeys.detail(DEFAULT_BOARD_ID);
+  const boardSlug = useBoardSlug();
+  const queryKey = boardKeys.detail(boardSlug);
 
   return useMutation({
     mutationFn: (input: CreateCardInput) => createCard({ data: input }),
@@ -202,7 +204,8 @@ export function useCreateCard() {
 
 export function useUpdateCard() {
   const queryClient = useQueryClient();
-  const queryKey = boardKeys.detail(DEFAULT_BOARD_ID);
+  const boardSlug = useBoardSlug();
+  const queryKey = boardKeys.detail(boardSlug);
 
   return useMutation({
     mutationFn: (input: UpdateCardInput) => updateCard({ data: input }),
@@ -262,7 +265,8 @@ export function useUpdateCard() {
 
 export function useMoveCard() {
   const queryClient = useQueryClient();
-  const queryKey = boardKeys.detail(DEFAULT_BOARD_ID);
+  const boardSlug = useBoardSlug();
+  const queryKey = boardKeys.detail(boardSlug);
 
   return useMutation({
     mutationFn: (input: MoveCardInput) => moveCard({ data: input }),
@@ -299,7 +303,8 @@ export function useMoveCard() {
 
 export function useDeleteCard() {
   const queryClient = useQueryClient();
-  const queryKey = boardKeys.detail(DEFAULT_BOARD_ID);
+  const boardSlug = useBoardSlug();
+  const queryKey = boardKeys.detail(boardSlug);
 
   return useMutation({
     mutationFn: (input: DeleteCardInput) => deleteCard({ data: input }),

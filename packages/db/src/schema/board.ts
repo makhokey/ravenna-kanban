@@ -5,13 +5,16 @@ import type { Priority, StatusValue } from "../constants";
 export const boards = sqliteTable("boards", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  displayIdPrefix: text("display_id_prefix").notNull(),
+  nextCardNumber: integer("next_card_number").notNull().default(1),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });
 
 export const cards = sqliteTable("cards", {
   id: text("id").primaryKey(),
-  displayId: text("display_id").unique(), // "RAV-1", "RAV-2" - human-readable ID
+  displayId: text("display_id"),
   title: text("title").notNull(),
   description: text("description"),
   position: text("position").notNull(),
