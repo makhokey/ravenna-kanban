@@ -88,7 +88,7 @@ A modern Kanban board application built with TanStack Start and deployed on Clou
 
 1. **Fork and clone the repository**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/ravenna-kanban.git
+   git clone https://github.com/makhokey/ravenna-kanban.git
    cd ravenna-kanban
    bun install
    ```
