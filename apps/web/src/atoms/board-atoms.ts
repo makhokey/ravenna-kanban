@@ -12,6 +12,12 @@ export const groupByAtom = atom<GroupBy>("status");
 export const priorityFiltersAtom = atom<Set<string>>(new Set<string>());
 export const tagFiltersAtom = atom<Set<string>>(new Set<string>());
 
+// Sorting
+export type SortField = "manual" | "created" | "updated";
+export type SortDirection = "asc" | "desc";
+export const sortFieldAtom = atom<SortField>("manual");
+export const sortDirectionAtom = atom<SortDirection>("desc");
+
 // Shared type for card editor state (dialog and panel)
 export type CardEditorState = {
   open: boolean;

@@ -12,7 +12,13 @@ import { cn } from "@repo/ui/lib/utils";
 import { useAtomValue, useSetAtom } from "jotai";
 import { Pencil, Trash2 } from "lucide-react";
 import { useMemo } from "react";
-import { dialogAtom, priorityFiltersAtom, tagFiltersAtom } from "~/atoms/board-atoms";
+import {
+  dialogAtom,
+  priorityFiltersAtom,
+  sortDirectionAtom,
+  sortFieldAtom,
+  tagFiltersAtom,
+} from "~/atoms/board-atoms";
 import { useBoard } from "~/hooks/use-board";
 import { useDeleteCard } from "~/hooks/use-cards";
 import { useFilteredCards } from "~/hooks/use-filtered-cards";
@@ -40,6 +46,8 @@ export function TableView() {
   const deleteCard = useDeleteCard();
   const priorityFilters = useAtomValue(priorityFiltersAtom);
   const tagFilters = useAtomValue(tagFiltersAtom);
+  const sortField = useAtomValue(sortFieldAtom);
+  const sortDirection = useAtomValue(sortDirectionAtom);
 
   // Flatten all cards from all status groups
   const allCards = useMemo(() => {
@@ -52,8 +60,14 @@ export function TableView() {
     );
   }, [board]);
 
-  // Apply filters
-  const filteredCards = useFilteredCards(allCards, priorityFilters, tagFilters);
+  // Apply filters and sorting
+  const filteredCards = useFilteredCards(
+    allCards,
+    priorityFilters,
+    tagFilters,
+    sortField,
+    sortDirection,
+  );
 
   if (!board) {
     return (

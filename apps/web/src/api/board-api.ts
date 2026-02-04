@@ -4,6 +4,7 @@ import type { Board, Card } from "@repo/db/types";
 import { createServerFn } from "@tanstack/react-start";
 import { eq, isNull } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
+import { getBoardSettingsFromRequest, type BoardSettings } from "~/lib/cookies.server";
 import { getDb } from "~/lib/db";
 import { cacheKeys, getCached } from "./cache-utils";
 
@@ -117,3 +118,10 @@ export const createDefaultBoard = createServerFn().handler(async () => {
 
   return { id: boardId };
 });
+
+// Get board settings from cookies
+export const getBoardSettings = createServerFn({ method: "GET" }).handler(
+  async (): Promise<BoardSettings> => {
+    return getBoardSettingsFromRequest();
+  },
+);

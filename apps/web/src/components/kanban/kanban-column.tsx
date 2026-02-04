@@ -42,7 +42,7 @@ function KanbanColumnInner({ groupKey, groupBy, cardIds, cardsById }: KanbanColu
     <>
       {/* Column Header */}
       <div className="flex items-center justify-between px-4">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 py-2">
           {groupBy === "status" ? (
             <StatusIcon status={groupKey as StatusValue} />
           ) : (

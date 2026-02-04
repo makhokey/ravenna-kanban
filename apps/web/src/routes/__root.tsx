@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+import globalCss from "@repo/ui/styles/global.css?url";
 import type { QueryClient } from "@tanstack/react-query";
 import {
   createRootRouteWithContext,
@@ -7,7 +8,6 @@ import {
   ScriptOnce,
   Scripts,
 } from "@tanstack/react-router";
-import appCss from "~/styles.css?url";
 
 import { ToastProvider } from "@repo/ui/components/toast";
 import { TooltipProvider } from "@repo/ui/components/tooltip";
@@ -33,7 +33,7 @@ export const Route = createRootRouteWithContext<{
         content: "A Kanban board application built with TanStack Start.",
       },
     ],
-    links: [{ rel: "stylesheet", href: appCss }],
+    links: [{ rel: "stylesheet", href: globalCss }],
   }),
   component: RootComponent,
 });

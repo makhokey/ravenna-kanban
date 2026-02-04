@@ -3,7 +3,12 @@ import * as React from "react";
 
 import { cn } from "@repo/ui/lib/utils";
 
-function Input({ className, type, ...props }: React.ComponentProps<"input">) {
+type InputProps = React.ComponentProps<"input"> & {
+  nativeInput?: boolean;
+};
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- extracted to prevent DOM spread
+function Input({ className, type, nativeInput, ...props }: InputProps) {
   return (
     <InputPrimitive
       type={type}
@@ -17,4 +22,4 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   );
 }
 
-export { Input };
+export { Input, type InputProps };

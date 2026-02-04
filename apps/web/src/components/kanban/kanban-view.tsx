@@ -20,8 +20,12 @@ import {
   activeCardAtom,
   groupByAtom,
   priorityFiltersAtom,
+  sortDirectionAtom,
+  sortFieldAtom,
   tagFiltersAtom,
   tempCardOrderAtom,
+  type SortDirection,
+  type SortField,
 } from "~/atoms/board-atoms";
 import { useBoard } from "~/hooks/use-board";
 import { useMoveCard } from "~/hooks/use-cards";
@@ -73,9 +77,11 @@ export function KanbanView() {
   const tempCardOrder = useAtomValue(tempCardOrderAtom);
   const activeCard = useAtomValue(activeCardAtom);
 
-  // Read filters once at top level instead of in each column
+  // Read filters and sort settings once at top level instead of in each column
   const priorityFilters = useAtomValue(priorityFiltersAtom);
   const tagFilters = useAtomValue(tagFiltersAtom);
+  const sortField = useAtomValue(sortFieldAtom);
+  const sortDirection = useAtomValue(sortDirectionAtom);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -300,6 +306,8 @@ export function KanbanView() {
               cardsById={board.cardsById}
               priorityFilters={priorityFilters}
               tagFilters={tagFilters}
+              sortField={sortField}
+              sortDirection={sortDirection}
             />
           );
         })}
@@ -325,6 +333,8 @@ interface FilteredColumnProps {
   cardsById: Record<string, CardData>;
   priorityFilters: Set<string>;
   tagFilters: Set<string>;
+  sortField: SortField;
+  sortDirection: SortDirection;
 }
 
 const FilteredColumn = memo(function FilteredColumn({
@@ -334,12 +344,16 @@ const FilteredColumn = memo(function FilteredColumn({
   cardsById,
   priorityFilters,
   tagFilters,
+  sortField,
+  sortDirection,
 }: FilteredColumnProps) {
   const filteredCardIds = useFilteredCardIds(
     cardIds,
     cardsById,
     priorityFilters,
     tagFilters,
+    sortField,
+    sortDirection,
   );
 
   return (

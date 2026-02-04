@@ -1,19 +1,27 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useLoaderData } from "@tanstack/react-router";
 import { Suspense } from "react";
+import { getBoardSettings } from "~/api/board-api";
 import { CardDialog, CardPanel } from "~/components/card-editor";
 import { BoardFilter, BoardView } from "~/components/layout";
+import { SettingsHydrator } from "~/components/settings-hydrator";
 import { boardQueryOptions } from "~/hooks/use-board";
 
 export const Route = createFileRoute("/board/")({
-  loader: ({ context }) => {
-    return context.queryClient.ensureQueryData(boardQueryOptions);
+  loader: async ({ context }) => {
+    const [board, settings] = await Promise.all([
+      context.queryClient.ensureQueryData(boardQueryOptions),
+      getBoardSettings(),
+    ]);
+    return { board, settings };
   },
   component: BoardPage,
 });
 
 function BoardPage() {
+  const { settings } = useLoaderData({ from: "/board/" });
+
   return (
-    <>
+    <SettingsHydrator settings={settings}>
       <Suspense
         fallback={
           <div className="flex flex-1 flex-col">
@@ -44,6 +52,6 @@ function BoardPage() {
         </div>
       </Suspense>
       <CardDialog />
-    </>
+    </SettingsHydrator>
   );
 }

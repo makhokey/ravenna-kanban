@@ -91,6 +91,7 @@
     "node": ">=22"
   },
   "dependencies": {
+    "@types/react": "^19.2.11",
     "use-debounce": "^10.1.0"
   }
 }
